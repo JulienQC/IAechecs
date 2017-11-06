@@ -66,7 +66,7 @@ namespace processAI1
                     return coupsPion(plateau, i, j);
                 case CG:
                 case CD:
-                    return coupsCavalier(plateau, i, j);
+                    return coupsCavalier(plateau, m_joueur, i, j);
                 case F:
                     return coupsFou(plateau, i, j);
                 case TG:
@@ -108,9 +108,9 @@ namespace processAI1
 
         //index: index de la case de départ
         //i, j: coord de la case d'arrivee
-        private Boolean pieceAlliee(int[] plateau, int index, int i, int j)
+        private Boolean pieceAlliee(int[] plateau, int joueur, int i, int j)
         {
-            return !(dansTableau(i, j) && (plateau[index] * plateau[coordToIndex(i, j)] <= 0));
+            return !(dansTableau(i, j) && (joueur * plateau[coordToIndex(i, j)] <= 0));
         }
 
         //retourne true ssi la piece en position (i, j) est menacee dans la position t
@@ -121,50 +121,46 @@ namespace processAI1
         }
 
 
-
-
-        private List<String> coupsCavalier(int[] plateau, int i, int j)
+        private List<String> coupsCavalier(int[] plateau, int joueur, int i, int j)
         {
             List<String> lc = new List<String>();
-            int index = coordToIndex(i, j);
 
-
-            if(!pieceAlliee(plateau, index, i - 1, j - 2))
+            if(!pieceAlliee(plateau, joueur, i - 1, j - 2))
             {
                 lc.Add(tabCoord[coordToIndex(i - 1, j - 2)]);
             }
 
-            if (!pieceAlliee(plateau, index, i + 1, j - 2))
+            if (!pieceAlliee(plateau, joueur, i + 1, j - 2))
             {
                 lc.Add(tabCoord[coordToIndex(i + 1, j - 2)]);
             }
 
-            if (!pieceAlliee(plateau, index, i - 2, j - 1))
+            if (!pieceAlliee(plateau, joueur, i - 2, j - 1))
             {
                 lc.Add(tabCoord[coordToIndex(i - 2, j - 1)]);
             }
 
-            if (!pieceAlliee(plateau, index, i + 2, j - 1))
+            if (!pieceAlliee(plateau, joueur, i + 2, j - 1))
             {
                 lc.Add(tabCoord[coordToIndex(i + 2, j - 1)]);
             }
 
-            if (!pieceAlliee(plateau, index, i - 2, j + 1))
+            if (!pieceAlliee(plateau, joueur, i - 2, j + 1))
             {
                 lc.Add(tabCoord[coordToIndex(i - 2, j + 1)]);
             }
 
-            if (!pieceAlliee(plateau, index, i + 2, j + 1))
+            if (!pieceAlliee(plateau, joueur, i + 2, j + 1))
             {
                 lc.Add(tabCoord[coordToIndex(i + 2, j + 1)]);
             }
 
-            if (!pieceAlliee(plateau, index, i - 1, j + 2))
+            if (!pieceAlliee(plateau, joueur, i - 1, j + 2))
             {
                 lc.Add(tabCoord[coordToIndex(i - 1, j + 2)]);
             }
 
-            if (!pieceAlliee(plateau, index, i + 1, j + 2))
+            if (!pieceAlliee(plateau, joueur, i + 1, j + 2))
             {
                 lc.Add(tabCoord[coordToIndex(i + 1, j + 2)]);
             }
