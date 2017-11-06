@@ -13,7 +13,7 @@ namespace processAI1
                                            "a3","b3","c3","d3","e3","f3","g3","h3",
                                            "a2","b2","c2","d2","e2","f2","g2","h2",
                                            "a1","b1","c1","d1","e1","f1","g1","h1" };
-        
+
 
         private const int PP = 10; //pion passant
         private const int P = 1; //pion
@@ -25,6 +25,8 @@ namespace processAI1
         private const int D = 5; //dame
         private const int R = 6; //roi
 
+        private int[,] directionFou = new int[,] { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
+        private int[,] directionTour = new int[,] { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
         private int m_joueur;
 
         public IA()
@@ -68,12 +70,12 @@ namespace processAI1
                 case CD:
                     return coupsCavalier(plateau, m_joueur, i, j);
                 case F:
-                    return coupsFou(plateau, i, j);
+                    return coupsFou(plateau, m_joueur, i, j);
                 case TG:
                 case TD:
-                    return coupsTour(plateau, i, j);
+                    return coupsTour(plateau, m_joueur, i, j);
                 case D:
-                    return coupsDame(plateau, i, j);                    
+                    return coupsDame(plateau, m_joueur, i, j);
                 case R:
                     return coupsRoi(plateau, i, j);
                 default:
@@ -99,7 +101,7 @@ namespace processAI1
 
         private Boolean dansTableau(int i, int j)
         {
-            if(i < 8 && i >= 0 && j < 8 && j >= 0)
+            if (i < 8 && i >= 0 && j < 8 && j >= 0)
             {
                 return true;
             }
@@ -110,13 +112,22 @@ namespace processAI1
         //i, j: coord de la case d'arrivee
         private Boolean pieceAlliee(int[] plateau, int joueur, int i, int j)
         {
-            return !(dansTableau(i, j) && (joueur * plateau[coordToIndex(i, j)] <= 0));
+            return dansTableau(i, j) && !(pieceEnemie(plateau, joueur, i, j) && caseVide(plateau, i, j));
+        }
+
+        private Boolean pieceEnemie(int[] plateau, int joueur, int i, int j)
+        {
+            return dansTableau(i, j) && (joueur * plateau[coordToIndex(i, j)] < 0);
+        }
+
+        private Boolean caseVide(int[] plateau, int i, int j)
+        {
+            return dansTableau(i, j) && plateau[coordToIndex(i, j)] == 0;
         }
 
         //retourne true ssi la piece en position (i, j) est menacee dans la position t
         private Boolean pieceMenacee(int[] plateau, int i, int j)
         {
-
             return true;
         }
 
@@ -168,31 +179,73 @@ namespace processAI1
             return lc;
         }
 
-        private List<String> coupsFou(int[] plateau, int i, int j)
+        private List<String> coupsFou(int[] plateau, int joueur, int i, int j)
         {
             List<String> lc = new List<String>();
+            
+            for(int dirIndex = 0; dirIndex < this.directionFou.Length; dirIndex++)
+            {
+                int dirX = this.directionFou[dirIndex, 0];
+                int dirY = this.directionFou[dirIndex, 1];
 
+                for (int y = i, x = j; ; y += dirY, x += dirX)
+                {
+                    if (!pieceAlliee(plateau, joueur, y, x))
+                    {
+                        lc.Add(tabCoord[coordToIndex(y, x)]);
 
+                        if(pieceEnemie(plateau, joueur, y, x))
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
 
             return lc;
         }
 
 
-        private List<String> coupsTour(int[] plateau, int i, int j)
+        private List<String> coupsTour(int[] plateau, int joueur, int i, int j)
         {
             List<String> lc = new List<String>();
 
+            for (int dirIndex = 0; dirIndex < this.directionTour.Length; dirIndex++)
+            {
+                int dirX = this.directionTour[dirIndex, 0];
+                int dirY = this.directionTour[dirIndex, 1];
 
+                for(int y = i, x = j; ; y += dirY, x += dirX)
+                {
+                    if (!pieceAlliee(plateau, joueur, y, x))
+                    {
+                        lc.Add(tabCoord[coordToIndex(y, x)]);
+
+                        if(pieceEnemie(plateau, joueur, y, x))
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
 
             return lc;
         }
 
-        private List<String> coupsDame(int[] plateau, int i, int j)
+        private List<String> coupsDame(int[] plateau, int joueur, int i, int j)
         {
             List<String> lc = new List<String>();
 
-            lc.AddRange(coupsFou(plateau, i, j));
-            lc.AddRange(coupsTour(plateau, i, j));
+            lc.AddRange(coupsFou(plateau, joueur, i, j));
+            lc.AddRange(coupsTour(plateau, joueur, i, j));
 
             return lc;
         }
