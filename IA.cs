@@ -108,10 +108,10 @@ namespace processAI1
         //i, j: coord de la case d'arrivee
         private Boolean pieceAlliee(int[] plateau, int joueur, int i, int j)
         {
-            return !pieceEnemie(plateau, joueur, i, j) && !caseVide(plateau, i, j);
+            return (joueur * plateau[coordToIndex(i, j)] > 0);
         }
 
-        private Boolean pieceEnemie(int[] plateau, int joueur, int i, int j)
+        private Boolean pieceEnnemie(int[] plateau, int joueur, int i, int j)
         {
             return (joueur * plateau[coordToIndex(i, j)] < 0);
         }
@@ -175,8 +175,19 @@ namespace processAI1
         private List<Coup> coupsPionManger(int[] plateau, int joueur, int i, int j)
         {
             List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
 
-
+            // le pion mange a gauche
+            if (dansTableau(i - joueur, j - 1) && pieceEnnemie(plateau, joueur, i - joueur, j - 1))
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur, j - 1)));
+            }
+            // le pion mange a droite
+            if (dansTableau(i - joueur, j + 1) && pieceEnnemie(plateau, joueur, i - joueur, j + 1))
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur, j + 1)));
+            }
+            // pas de prise en passant (peu d'interet)
 
             return lc;
         }
@@ -184,8 +195,29 @@ namespace processAI1
         private List<Coup> coupsPionDeplacer(int[] plateau, int joueur, int i, int j)
         {
             List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
 
+            // le pion se deplace de +1 en i si c'est le joueur noir (joueur = -1), et de -1 sinon
+            if (dansTableau(i - joueur, j) && caseVide(plateau, i - joueur, j)) 
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur, j)));
+            }
 
+            int ligneDepart;
+            if(joueur == 1)
+            {
+                ligneDepart = 6;
+            }
+            else
+            {
+                ligneDepart = 1;
+            }
+
+            // cas où le pion est sur sa ligne de depart: il peut avancer de 2 cases
+            if(i == ligneDepart && caseVide(plateau, i - joueur * 2, j))
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur * 2, j)));
+            }
 
             return lc;
         }
@@ -231,7 +263,7 @@ namespace processAI1
                     {
                         lc.Add(new Coup(index, coordToIndex(y, x)));
 
-                        if (pieceEnemie(plateau, joueur, y, x))
+                        if (pieceEnnemie(plateau, joueur, y, x))
                         {
                             break;
                         }
@@ -263,7 +295,7 @@ namespace processAI1
                     {
                         lc.Add(new Coup(index, coordToIndex(y, x)));
 
-                        if (pieceEnemie(plateau, joueur, y, x))
+                        if (pieceEnnemie(plateau, joueur, y, x))
                         {
                             break;
                         }
