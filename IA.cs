@@ -77,8 +77,6 @@ namespace processAI1
                 case R:
                     return coupsRoi(plateau, m_joueur, i, j);
                 default:
-                    Console.WriteLine("Piece de code <" + Math.Abs(plateau[index]) + "> non identifiée");
-                    Console.ReadLine();
                     return new List<Coup>();
             }
         }
@@ -88,6 +86,152 @@ namespace processAI1
             List<Coup> lc = new List<Coup>();
             lc.AddRange(coupsPionManger(plateau, joueur, i, j));
             lc.AddRange(coupsPionDeplacer(plateau, joueur, i, j));
+            return lc;
+        }
+
+
+        private List<Coup> coupsPionManger(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
+
+            // le pion mange a gauche
+            if (dansTableau(i - joueur, j - 1) && pieceEnnemie(plateau, joueur, i - joueur, j - 1))
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur, j - 1)));
+            }
+            // le pion mange a droite
+            if (dansTableau(i - joueur, j + 1) && pieceEnnemie(plateau, joueur, i - joueur, j + 1))
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur, j + 1)));
+            }
+            // pas de prise en passant (peu d'interet)
+
+            return lc;
+        }
+
+        private List<Coup> coupsPionDeplacer(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
+
+            // le pion se deplace de +1 en i si c'est le joueur noir (joueur = -1), et de -1 sinon
+            if (dansTableau(i - joueur, j) && caseVide(plateau, i - joueur, j)) 
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur, j)));
+            }
+
+            int ligneDepart;
+            if(joueur == 1) ligneDepart = 6;
+            else            ligneDepart = 1;
+
+            // cas où le pion est sur sa ligne de depart: il peut avancer de 2 cases
+            if(i == ligneDepart && caseVide(plateau, i - joueur * 2, j))
+            {
+                lc.Add(new Coup(index, coordToIndex(i - joueur * 2, j)));
+            }
+
+            return lc;
+        }
+
+        private List<Coup> coupsCavalier(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
+
+            int x, y;
+            for(int k = 0; k < casesCavalier.GetLength(0); k++)
+            {
+                x = i + casesCavalier[k, 0];
+                y = j + casesCavalier[k, 1];
+
+                if (dansTableau(x, y) && !pieceAlliee(plateau, joueur, x, y))
+                {
+
+                    lc.Add(new Coup(index, coordToIndex(x, y)));
+                }
+            }
+            
+            return lc;
+        }
+
+        private List<Coup> coupsFou(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
+
+            int dirX, dirY, x, y;
+            for (int dirIndex = 0; dirIndex < this.directionFou.GetLength(0); dirIndex++)
+            {
+                dirX = this.directionFou[dirIndex, 0];
+                dirY = this.directionFou[dirIndex, 1];
+                y = i + dirY;
+                x = j + dirX;
+
+                // avancer dans la diagonale tant qu'il y a des case vides
+                while (dansTableau(y, x) && caseVide(plateau, y, x))
+                {
+                    lc.Add(new Coup(index, coordToIndex(y, x)));
+                    y += dirY;
+                    x += dirX;
+                }
+                // si l'obstacle est une piece ennemie, on peut la manger
+                if (dansTableau(y, x) && pieceEnnemie(plateau, joueur, y, x))
+                {
+                    lc.Add(new Coup(index, coordToIndex(y, x)));
+                }
+            }
+
+            return lc;
+        }
+
+
+        private List<Coup> coupsTour(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
+
+            int dirX, dirY, x, y;
+            for (int dirIndex = 0; dirIndex < this.directionTour.GetLength(0); dirIndex++)
+            {
+                dirX = this.directionTour[dirIndex, 0];
+                dirY = this.directionTour[dirIndex, 1];
+                y = i + dirY;
+                x = j + dirX;
+                
+                // avancer dans la diagonale tant qu'il y a des case vides
+                while (dansTableau(y, x) && caseVide(plateau, y, x))
+                {
+                    lc.Add(new Coup(index, coordToIndex(y, x)));
+                    y += dirY;
+                    x += dirX;
+                }
+                // si l'obstacle est une piece ennemie, on peut la manger
+                if (dansTableau(y, x) && pieceEnnemie(plateau, joueur, y, x))
+                {
+                    lc.Add(new Coup(index, coordToIndex(y, x)));
+                }
+            }
+
+            return lc;
+        }
+
+        private List<Coup> coupsDame(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+
+            lc.AddRange(coupsFou(plateau, joueur, i, j));
+            lc.AddRange(coupsTour(plateau, joueur, i, j));
+
+            return lc;
+        }
+
+        private List<Coup> coupsRoi(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
+
+
+
             return lc;
         }
 
@@ -171,163 +315,6 @@ namespace processAI1
             }
             return false;
         }*/
-
-        private List<Coup> coupsPionManger(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-            int index = coordToIndex(i, j);
-
-            // le pion mange a gauche
-            if (dansTableau(i - joueur, j - 1) && pieceEnnemie(plateau, joueur, i - joueur, j - 1))
-            {
-                lc.Add(new Coup(index, coordToIndex(i - joueur, j - 1)));
-            }
-            // le pion mange a droite
-            if (dansTableau(i - joueur, j + 1) && pieceEnnemie(plateau, joueur, i - joueur, j + 1))
-            {
-                lc.Add(new Coup(index, coordToIndex(i - joueur, j + 1)));
-            }
-            // pas de prise en passant (peu d'interet)
-
-            return lc;
-        }
-
-        private List<Coup> coupsPionDeplacer(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-            int index = coordToIndex(i, j);
-
-            // le pion se deplace de +1 en i si c'est le joueur noir (joueur = -1), et de -1 sinon
-            if (dansTableau(i - joueur, j) && caseVide(plateau, i - joueur, j)) 
-            {
-                lc.Add(new Coup(index, coordToIndex(i - joueur, j)));
-            }
-
-            int ligneDepart;
-            if(joueur == 1)
-            {
-                ligneDepart = 6;
-            }
-            else
-            {
-                ligneDepart = 1;
-            }
-
-            // cas où le pion est sur sa ligne de depart: il peut avancer de 2 cases
-            if(i == ligneDepart && caseVide(plateau, i - joueur * 2, j))
-            {
-                lc.Add(new Coup(index, coordToIndex(i - joueur * 2, j)));
-            }
-
-            return lc;
-        }
-
-        private List<Coup> coupsCavalier(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-            int index = coordToIndex(i, j);
-
-            int x, y;
-            for(int k = 0; k < casesCavalier.GetLength(0); k++)
-            {
-                x = i + casesCavalier[k, 0];
-                y = j + casesCavalier[k, 1];
-                /*
-                Console.WriteLine("(" + i + ", " + j + ") -> (" + x + ", " + y + ")");
-                Console.ReadLine();
-                */
-                if (dansTableau(x, y) && !pieceAlliee(plateau, joueur, x, y))
-                {
-
-                    lc.Add(new Coup(index, coordToIndex(x, y)));
-                }
-            }
-            
-            return lc;
-        }
-
-        private List<Coup> coupsFou(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-            int index = coordToIndex(i, j);
-
-            int dirX, dirY;
-            for (int dirIndex = 0; dirIndex < this.directionFou.GetLength(0); dirIndex++)
-            {
-                dirX = this.directionFou[dirIndex, 0];
-                dirY = this.directionFou[dirIndex, 1];
-
-                for (int y = i, x = j; ; y += dirY, x += dirX)
-                {
-                    if (dansTableau(x, y) && !pieceAlliee(plateau, joueur, y, x))
-                    {
-                        lc.Add(new Coup(index, coordToIndex(y, x)));
-
-                        if (pieceEnnemie(plateau, joueur, y, x))
-                        {
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-
-            return lc;
-        }
-
-
-        private List<Coup> coupsTour(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-            int index = coordToIndex(i, j);
-
-            for (int dirIndex = 0; dirIndex < this.directionTour.GetLength(0); dirIndex++)
-            {
-                int dirX = this.directionTour[dirIndex, 0];
-                int dirY = this.directionTour[dirIndex, 1];
-
-                for (int y = i, x = j; ; y += dirY, x += dirX)
-                {
-                    if (dansTableau(x, y) && !pieceAlliee(plateau, joueur, y, x))
-                    {
-                        lc.Add(new Coup(index, coordToIndex(y, x)));
-
-                        if (pieceEnnemie(plateau, joueur, y, x))
-                        {
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-
-            return lc;
-        }
-
-        private List<Coup> coupsDame(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-
-            lc.AddRange(coupsFou(plateau, joueur, i, j));
-            lc.AddRange(coupsTour(plateau, joueur, i, j));
-
-            return lc;
-        }
-
-        private List<Coup> coupsRoi(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> lc = new List<Coup>();
-
-
-
-            return lc;
-        }
     }
 }
 
