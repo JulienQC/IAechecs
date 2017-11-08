@@ -31,8 +31,6 @@ namespace processAI1
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
 
         private int m_joueur;
-        private Boolean petitRoque;
-        private Boolean grandRoque;
 
         public IA()
         {
@@ -42,27 +40,67 @@ namespace processAI1
         public void jouerCoup(int[] plateau, String[] coord, int joueur)
         {
             m_joueur = joueur;
-            List<Coup> coupsPossibles = new List<Coup>();
+            List<Coup> coupsPotentiels = new List<Coup>();
+            
             for (int i = 0; i < plateau.Length; i++)
             {
                 if (joueur * plateau[i] > 0) //liste des pieces du joueur
                 {
-                    coupsPossibles.AddRange(listeCoups(plateau, i));
+                    coupsPotentiels.AddRange(listeCoups(plateau, i));
                 }
             }
 
+            // verifier que le coup ne met pas le roi du joueur en echec
+            List<Coup> coupsPossibles = filtrerMenaces(plateau, coupsPotentiels);
+
+            // choisir un coup aleatoire parmi les coups autorises
             Random rnd = new Random();
             Coup coupJoue = coupsPossibles[rnd.Next(coupsPossibles.Count)];
             coord[0] = tabCoord[coupJoue.indexDepart];
             coord[1] = tabCoord[coupJoue.indexArrivee];
-            majConditionRoque(plateau, coupJoue);
         }
 
-        private void majConditionRoque(int[] plateau, Coup c)
+        private List<Coup> filtrerMenaces(int[] plateau, List<Coup> lc)
         {
-            //TODO: gerer le roque
-        }
+            List<Coup> coupsPossibles = new List<Coup>();
 
+            int lRoi = 0, cRoi = 0; //ligne et colonne du roi du joueur
+            for (int i = 0; i < plateau.Length; i++)
+            {
+                if (m_joueur * plateau[i] == R)
+                {
+                    lRoi = i / 8;
+                    cRoi = i % 8;
+                }
+            }
+
+            int nlRoi, ncRoi; // nouvelle ligne et colonne du roi du joueur
+            foreach (Coup c in lc)
+            {
+                nlRoi = lRoi; ncRoi = cRoi;
+                //jouer fictivement le coup sur un nouveau plateau
+                int[] nouveauPlateau = new int[plateau.Length];
+                Array.Copy(plateau, nouveauPlateau, plateau.Length);
+                nouveauPlateau[c.indexDepart] = 0;
+                nouveauPlateau[c.indexArrivee] = plateau[c.indexDepart];
+
+                //calculer la nouvelle position du roi du joueur s'il s'est deplace
+                if (m_joueur * plateau[c.indexDepart] == R)
+                {
+                    nlRoi = c.indexArrivee / 8;
+                    ncRoi = c.indexArrivee % 8;
+                }
+
+                //ajouter le coup aux coups possibles s'il ne met pas en danger le roi du joueur
+                if (!pieceMenacee(nouveauPlateau, m_joueur, nlRoi, ncRoi))
+                {
+                    coupsPossibles.Add(c);
+                }
+            }
+
+            return coupsPossibles;
+        }
+        
         //retourne la liste des coups possibles pour la piece situee a l'index donne
         private List<Coup> listeCoups(int[] plateau, int index)
         {
@@ -288,55 +326,54 @@ namespace processAI1
         }
 
         //retourne true ssi la piece en position (i, j) est menacee dans la position t
-        /*
         private Boolean pieceMenacee(int[] plateau, int joueur, int i, int j)
         {
             List<Coup> cavaliersPotentiels = coupsCavalier(plateau, joueur, i, j);
-            foreach (int index in cavaliersPotentiels)
+            foreach (Coup c in cavaliersPotentiels)
             {
-                if (plateau[index] == -1 * joueur * CG ||
-                    plateau[index] == -1 * joueur * CD)
+                if (plateau[c.indexArrivee] == -1 * joueur * CG ||
+                    plateau[c.indexArrivee] == -1 * joueur * CD)
                 {
                     return true;
                 }
             }
             List<Coup> pionsPotentiels = coupsPionManger(plateau, joueur, i, j);
-            foreach (int index in pionsPotentiels)
+            foreach (Coup c in pionsPotentiels)
             {
-                if (plateau[index] == -1 * joueur * P)
+                if (plateau[c.indexArrivee] == -1 * joueur * P)
                 {
                     return true;
                 }
             }
             List<Coup> fousPotentiels = coupsFou(plateau, joueur, i, j);
-            foreach (int index in fousPotentiels)
+            foreach (Coup c in fousPotentiels)
             {
-                if (plateau[index] == -1 * joueur * F ||
-                    plateau[index] == -1 * joueur * D)
+                if (plateau[c.indexArrivee] == -1 * joueur * F ||
+                    plateau[c.indexArrivee] == -1 * joueur * D)
                 {
                     return true;
                 }
             }
             List<Coup> toursPotentiels = coupsTour(plateau, joueur, i, j);
-            foreach (int index in toursPotentiels)
+            foreach (Coup c in toursPotentiels)
             {
-                if (plateau[index] == -1 * joueur * TG ||
-                    plateau[index] == -1 * joueur * TD ||
-                    plateau[index] == -1 * joueur * D)
+                if (plateau[c.indexArrivee] == -1 * joueur * TG ||
+                    plateau[c.indexArrivee] == -1 * joueur * TD ||
+                    plateau[c.indexArrivee] == -1 * joueur * D)
                 {
                     return true;
                 }
             }
             List<Coup> roisPotentiels = coupsRoi(plateau, joueur, i, j);
-            foreach (int index in roisPotentiels)
+            foreach (Coup c in roisPotentiels)
             {
-                if (plateau[index] == -1 * joueur * R)
+                if (plateau[c.indexArrivee] == -1 * joueur * R)
                 {
                     return true;
                 }
             }
             return false;
-        }*/
+        }
     }
 }
 
