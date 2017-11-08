@@ -24,12 +24,15 @@ namespace processAI1
         private const int F = 4; //fou
         private const int D = 5; //dame
         private const int R = 6; //roi
-
-        private int m_joueur;
+        
         private int[,] directionFou = new int[,] { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
         private int[,] directionTour = new int[,] { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
         private int[,] casesCavalier = new int[,] { { -1, -2 }, { +1, -2 }, { -2, -1 }, { +2, -1 },
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
+
+        private int m_joueur;
+        private Boolean petitRoque;
+        private Boolean grandRoque;
 
         public IA()
         {
@@ -52,6 +55,12 @@ namespace processAI1
             Coup coupJoue = coupsPossibles[rnd.Next(coupsPossibles.Count)];
             coord[0] = tabCoord[coupJoue.indexDepart];
             coord[1] = tabCoord[coupJoue.indexArrivee];
+            majConditionRoque(plateau, coupJoue);
+        }
+
+        private void majConditionRoque(int[] plateau, Coup c)
+        {
+            //TODO: gerer le roque
         }
 
         //retourne la liste des coups possibles pour la piece situee a l'index donne
@@ -229,8 +238,21 @@ namespace processAI1
         private List<Coup> coupsRoi(int[] plateau, int joueur, int i, int j)
         {
             List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
 
+            // coup du roi vers une case voisine
+            for (int x = -1; x < 2; x++)
+            {
+                for(int y = -1; y < 2; y++)
+                {
+                    if(dansTableau(i + x, j + y) && !pieceAlliee(plateau, joueur, i + x, j + y))
+                    {
+                        lc.Add(new Coup(index, coordToIndex(i + x, j + y)));
+                    }
+                }
+            }
 
+            // TODO: gerer petit roque et grand roque
 
             return lc;
         }
