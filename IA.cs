@@ -374,6 +374,48 @@ namespace processAI1
             }
             return false;
         }
+
+        public void jouerCoupHeuristique(int[] plateau, String[] coord, int joueur)
+        {
+            m_joueur = joueur;
+            List<Coup> coupsPotentiels = new List<Coup>();
+
+            for (int i = 0; i < plateau.Length; i++)
+            {
+                if (joueur * plateau[i] > 0) //liste des pieces du joueur
+                {
+                    coupsPotentiels.AddRange(listeCoups(plateau, i));
+                }
+            }
+
+            // verifier que le coup ne met pas le roi du joueur en echec
+            List<Coup> coupsPossibles = filtrerMenaces(plateau, coupsPotentiels);
+
+            //attribuer une valeur a chaque coup
+            int scoreMax = eval(coupsPossibles[0], plateau);
+            Coup coupJoue = coupsPossibles[0];
+            for (int i = 0; i < coupsPossibles.Count; i++)
+            {
+                int score = eval(coupsPossibles[i], plateau);
+                coupsPossibles[i].setPuissance(score);
+                if (score > scoreMax)
+                {
+                    scoreMax = score;
+                    coupJoue = coupsPossibles[i];
+                } 
+            }
+            
+             
+
+            // choisir un coup aleatoire parmi les coups autorisés
+            coord[0] = tabCoord[coupJoue.indexDepart];
+            coord[1] = tabCoord[coupJoue.indexArrivee];
+        }
+
+        private int eval(Coup c, int[] plateau) {
+            return 1;
+            //evaluation a faire
+        }
     }
 }
 
@@ -381,10 +423,22 @@ public struct Coup
 {
     public int indexDepart; // indexe de la case de départ du coup
     public int indexArrivee; // indexe de la case d'arrivée du coup
+    public int puissance;  // valeur du coup en terme d'efficacité
 
     public Coup(int dep, int arr)
     {
         indexDepart = dep;
         indexArrivee = arr;
+        puissance = 0;
+    }
+
+    public void setPuissance(int p)
+    {
+        puissance = p;
+    }
+
+    public int getPuissance()
+    {
+        return puissance;
     }
 }
