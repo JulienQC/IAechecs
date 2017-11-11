@@ -30,10 +30,16 @@ namespace processAI1
         private int[,] casesCavalier = new int[,] { { -1, -2 }, { +1, -2 }, { -2, -1 }, { +2, -1 },
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
 
-        private int m_joueur;
+        private int m_joueur; // couleur du joueur (blanc: 1; noir: -1)
         private Boolean roiABouge;
         private Boolean tourDroiteABouge;
         private Boolean tourGaucheABouge;
+
+        private double alpha = 0.25; // coefficient d'evaluation de la gestion des echanges
+        private double beta = 0.25; // coefficient d'evaluation de la protection du roi
+        private double gamma = 0.25; // coefficient d'evaluation de l'activite des pieces
+        private double omega = 0.25; // coefficient d'evaluation de l'occupation du centre
+
 
         public IA()
         {
@@ -61,7 +67,8 @@ namespace processAI1
 
             // choisir un coup aleatoire parmi les coups autorises
             Random rnd = new Random();
-            Coup coupJoue = coupsPossibles[rnd.Next(coupsPossibles.Count)];
+            Coup coupJoue = choisirCoup(plateau, joueur, coupsPossibles);
+
             if (coupJoue.estPetitRoque())
             {
                 coord[0] = "petit roque";
@@ -458,52 +465,79 @@ namespace processAI1
             return false;
         }
 
-        public void jouerCoupHeuristique(int[] plateau, String[] coord, int joueur)
+        private Coup choisirCoup(int[] plateau, int joueur, List<Coup> coupsPossibles)
         {
-            m_joueur = joueur;
-            List<Coup> coupsPotentiels = new List<Coup>();
+            Coup c = coupsPossibles[0];
 
-            for (int i = 0; i < plateau.Length; i++)
-            {
-                if (joueur * plateau[i] > 0) //liste des pieces du joueur
-                {
-                    coupsPotentiels.AddRange(listeCoups(plateau, i));
-                }
-            }
-
-            // verifier que le coup ne met pas le roi du joueur en echec
-            List<Coup> coupsPossibles = filtrerMenaces(plateau, coupsPotentiels);
-
-            //attribuer une valeur a chaque coup
-            int scoreMax = eval(coupsPossibles[0], plateau);
-            Coup coupJoue = coupsPossibles[0];
+            int scoreMax = eval(plateau, coupsPossibles[0]);
             for (int i = 0; i < coupsPossibles.Count; i++)
             {
-                int score = eval(coupsPossibles[i], plateau);
+                int score = eval(plateau, coupsPossibles[i]);
                 coupsPossibles[i].setPuissance(score);
                 if (score > scoreMax)
                 {
                     scoreMax = score;
-                    coupJoue = coupsPossibles[i];
-                } 
+                    c = coupsPossibles[i];
+                }
             }
+
+            return c;
+        }
+
+
+        // retourne un score pour le coup (un grand score correspond a un bon coup)
+        private int eval(int[] plateau, Coup c) {
+            double score = alpha * evalEchange(plateau, c) +
+                           beta * evalProtection(plateau, c) +
+                           gamma * evalCentre(plateau, c) +
+                           omega * evalActivite(plateau, c);
+            return (int)(score);
+        }
+
+        // evaluation de l'echange implique par le coup
+        private int evalEchange(int[] plateau, Coup c)
+        {
+            /*
+            int cible = valeurPiece(pieceCible);
+            List<Piece> protecteurs;
+            List<Piece> attaquants;
+            int val;
+            while(protecteurs.Any() && attaquants.Any())
+            {
+                cible -= valeurPiece(protecteurs.RemoveAt(0)); // on perd la piece mangee par le protecteur
+                cible += valeurPiece(attaquants.RemoveAt(0)); ; // on gagne la piece mangee par l'attaquant
+            }
+            if (protecteurs.Any())
+            {
+                cible -= valeurPiece(protecteurs.RemoveAt(0)); // s'il ne reste que des protecteurs, on perd le dernier des attaquants
+            }           
             
-             
-
-            // choisir un coup aleatoire parmi les coups autorisés
-            coord[0] = tabCoord[coupJoue.indexDepart];
-            coord[1] = tabCoord[coupJoue.indexArrivee];
-        }
-
-        private int eval(Coup c, int[] plateau) {
+            return cible;
+            */
             return 1;
-            //evaluation a faire
         }
 
+        // evaluation de la protection du roi apres le coup
+        private int evalProtection(int[] plateau, Coup c)
+        {
+            return 1;
+        }
+
+        // evaluation de l'occupation du centre apres le coup
+        private int evalCentre(int[] plateau, Coup c)
+        {
+            return 1;
+        }
+
+        // evaluation de l'activite des pieces apres le coup
+        private int evalActivite(int[] plateau, Coup c)
+        {
+            return 1;
+        }
     }
 }
 
-public struct Coup
+public class Coup
 {
     public int indexDepart; // indexe de la case de départ du coup
     public int indexArrivee; // indexe de la case d'arrivée du coup
@@ -548,3 +582,4 @@ public struct Coup
         return roque == 2;
     }
 }
+
