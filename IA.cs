@@ -31,9 +31,15 @@ namespace processAI1
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
 
         private int m_joueur;
+        private Boolean roiABouge;
+        private Boolean tourDroiteABouge;
+        private Boolean tourGaucheABouge;
 
         public IA()
         {
+            roiABouge = false;
+            tourDroiteABouge = false;
+            tourGaucheABouge = false;
         }
 
 
@@ -56,8 +62,35 @@ namespace processAI1
             // choisir un coup aleatoire parmi les coups autorises
             Random rnd = new Random();
             Coup coupJoue = coupsPossibles[rnd.Next(coupsPossibles.Count)];
-            coord[0] = tabCoord[coupJoue.indexDepart];
-            coord[1] = tabCoord[coupJoue.indexArrivee];
+            if (coupJoue.estPetitRoque())
+            {
+                coord[0] = "petit roque";
+                coord[1] = "";
+            }else if (coupJoue.estGrandRoque()) { 
+                coord[0] = "grand roque";
+                coord[1] = "";
+            }else {
+                coord[0] = tabCoord[coupJoue.indexDepart];
+                coord[1] = tabCoord[coupJoue.indexArrivee];
+            }
+            majInfoRoque(plateau, joueur, coupJoue);
+        }
+
+        // donne l'information sur le deplacement du roi et des tours pour savoir si un roque est faisable
+        private void majInfoRoque(int[] plateau, int joueur, Coup c)
+        {
+            if (!roiABouge && plateau[c.indexDepart] * joueur == R)
+            {
+                roiABouge = true;
+            }
+            if (!tourDroiteABouge && plateau[c.indexDepart] * joueur == TD)
+            {
+                tourDroiteABouge = true;
+            }
+            if (!tourGaucheABouge && plateau[c.indexDepart] * joueur == TG)
+            {
+                tourGaucheABouge = true;
+            }
         }
 
         private List<Coup> filtrerMenaces(int[] plateau, List<Coup> lc)
@@ -77,24 +110,32 @@ namespace processAI1
             int nlRoi, ncRoi; // nouvelle ligne et colonne du roi du joueur
             foreach (Coup c in lc)
             {
-                nlRoi = lRoi; ncRoi = cRoi;
-                //jouer fictivement le coup sur un nouveau plateau
-                int[] nouveauPlateau = new int[plateau.Length];
-                Array.Copy(plateau, nouveauPlateau, plateau.Length);
-                nouveauPlateau[c.indexDepart] = 0;
-                nouveauPlateau[c.indexArrivee] = plateau[c.indexDepart];
+                if(c.estPetitRoque() || !c.estGrandRoque())
+                { // la verification des menaces est deja incluse dans le calcul des coups de roque
 
-                //calculer la nouvelle position du roi du joueur s'il s'est deplace
-                if (m_joueur * plateau[c.indexDepart] == R)
-                {
-                    nlRoi = c.indexArrivee / 8;
-                    ncRoi = c.indexArrivee % 8;
-                }
-
-                //ajouter le coup aux coups possibles s'il ne met pas en danger le roi du joueur
-                if (!pieceMenacee(nouveauPlateau, m_joueur, nlRoi, ncRoi))
-                {
                     coupsPossibles.Add(c);
+                }
+                else 
+                {
+                    nlRoi = lRoi; ncRoi = cRoi;
+                    //jouer fictivement le coup sur un nouveau plateau
+                    int[] nouveauPlateau = new int[plateau.Length];
+                    Array.Copy(plateau, nouveauPlateau, plateau.Length);
+                    nouveauPlateau[c.indexDepart] = 0;
+                    nouveauPlateau[c.indexArrivee] = plateau[c.indexDepart];
+
+                    //calculer la nouvelle position du roi du joueur s'il s'est deplace
+                    if (m_joueur * plateau[c.indexDepart] == R)
+                    {
+                        nlRoi = c.indexArrivee / 8;
+                        ncRoi = c.indexArrivee % 8;
+                    }
+
+                    //ajouter le coup aux coups possibles s'il ne met pas en danger le roi du joueur
+                    if (!pieceMenacee(nouveauPlateau, m_joueur, nlRoi, ncRoi))
+                    {
+                        coupsPossibles.Add(c);
+                    }
                 }
             }
 
@@ -276,25 +317,67 @@ namespace processAI1
         private List<Coup> coupsRoi(int[] plateau, int joueur, int i, int j)
         {
             List<Coup> lc = new List<Coup>();
+
+            lc.AddRange(coupsRoiClassiques(plateau, joueur, i, j));
+            lc.AddRange(coupsRoiRoque(plateau, joueur, i, j));
+
+            return lc;
+        }
+
+        private List<Coup> coupsRoiClassiques(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> lc = new List<Coup>();
             int index = coordToIndex(i, j);
 
             // coup du roi vers une case voisine
             for (int x = -1; x < 2; x++)
             {
-                for(int y = -1; y < 2; y++)
+                for (int y = -1; y < 2; y++)
                 {
-                    if(dansTableau(i + x, j + y) && !pieceAlliee(plateau, joueur, i + x, j + y))
+                    if (dansTableau(i + x, j + y) && !pieceAlliee(plateau, joueur, i + x, j + y))
                     {
                         lc.Add(new Coup(index, coordToIndex(i + x, j + y)));
                     }
                 }
             }
 
-            // TODO: gerer petit roque et grand roque
-
             return lc;
         }
 
+        private List<Coup> coupsRoiRoque(int[] plateau, int joueur, int i, int j)
+        {
+
+            List<Coup> lc = new List<Coup>();
+            int index = coordToIndex(i, j);
+
+            // petit roque:
+            if (!roiABouge && !tourDroiteABouge &&
+               !pieceMenacee(plateau, joueur, i, j) &&
+               !pieceMenacee(plateau, joueur, i, j + 1) &&
+               !pieceMenacee(plateau, joueur, i, j + 2))
+            {
+                Coup c = new Coup(index, coordToIndex(i, j + 2));
+                c.setPetitRoque();
+                lc.Add(c);
+                tourDroiteABouge = true;
+                roiABouge = true;
+            }
+
+            //grand roque
+            if (!roiABouge && !tourGaucheABouge &&
+                !pieceMenacee(plateau, joueur, i, j) &&
+                !pieceMenacee(plateau, joueur, i, j - 1) &&
+                !pieceMenacee(plateau, joueur, i, j - 2))
+            {
+                Coup c = new Coup(index, coordToIndex(i, j - 2));
+                c.setGrandRoque();
+                lc.Add(c);
+                tourGaucheABouge = true;
+                roiABouge = true;
+            }
+
+            return lc;
+        }
 
         private int coordToIndex(int i, int j)
         {
@@ -364,7 +447,7 @@ namespace processAI1
                     return true;
                 }
             }
-            List<Coup> roisPotentiels = coupsRoi(plateau, joueur, i, j);
+            List<Coup> roisPotentiels = coupsRoiClassiques(plateau, joueur, i, j);
             foreach (Coup c in roisPotentiels)
             {
                 if (plateau[c.indexArrivee] == -1 * joueur * R)
@@ -416,6 +499,7 @@ namespace processAI1
             return 1;
             //evaluation a faire
         }
+
     }
 }
 
@@ -423,12 +507,14 @@ public struct Coup
 {
     public int indexDepart; // indexe de la case de départ du coup
     public int indexArrivee; // indexe de la case d'arrivée du coup
-    public int puissance;  // valeur du coup en terme d'efficacité
+    private int roque;
+    private int puissance;  // valeur du coup en terme d'efficacité
 
     public Coup(int dep, int arr)
     {
         indexDepart = dep;
         indexArrivee = arr;
+        roque = 0;
         puissance = 0;
     }
 
@@ -440,5 +526,25 @@ public struct Coup
     public int getPuissance()
     {
         return puissance;
+    }
+
+    public void setPetitRoque()
+    {
+        roque = 1;
+    }
+
+    public void setGrandRoque()
+    {
+        roque = 2;
+    }
+
+    public Boolean estPetitRoque()
+    {
+        return roque == 1;
+    }
+
+    public Boolean estGrandRoque()
+    {
+        return roque == 2;
     }
 }
