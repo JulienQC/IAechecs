@@ -20,9 +20,7 @@ namespace processAI1
                 String value;
                 String[] coord = new String[] { "", "", "" };
                 
-
-
-                IA ia = new IA();   
+                Agent agent = new Agent(1, coord, tabVal); //1: joueur blanc; -1: joueur noir
 
                 while (!stop)
                 {
@@ -59,7 +57,10 @@ namespace processAI1
                                 /***************************************** ECRIRE LE CODE DE L'IA *************************************/
                                 /******************************************************************************************************/
 
-                                ia.jouerCoup(tabVal, coord, 1); //1: joueur blanc; -1: joueur noir
+                                agent.observerPlateau();
+                                agent.majEtat();
+                                agent.choisirCoup();
+                                agent.jouerCoup();
 
                                 /********************************************************************************************************/
                                 /********************************************************************************************************/

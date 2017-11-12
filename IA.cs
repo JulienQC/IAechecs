@@ -3,18 +3,8 @@ using System.Collections.Generic;
 
 namespace processAI1
 {
-    class IA
+    class Intelligence
     {
-        String[] tabCoord = new string[] { "a8","b8","c8","d8","e8","f8","g8","h8",
-                                           "a7","b7","c7","d7","e7","f7","g7","h7",
-                                           "a6","b6","c6","d6","e6","f6","g6","h6",
-                                           "a5","b5","c5","d5","e5","f5","g5","h5",
-                                           "a4","b4","c4","d4","e4","f4","g4","h4",
-                                           "a3","b3","c3","d3","e3","f3","g3","h3",
-                                           "a2","b2","c2","d2","e2","f2","g2","h2",
-                                           "a1","b1","c1","d1","e1","f1","g1","h1" };
-        
-
         private const int PP = 10; //pion passant
         private const int P = 1; //pion
         private const int TG = 21; //tour gauche (different pour le roque)
@@ -24,7 +14,7 @@ namespace processAI1
         private const int F = 4; //fou
         private const int D = 5; //dame
         private const int R = 6; //roi
-        
+
         private int[,] directionFou = new int[,] { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
         private int[,] directionTour = new int[,] { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
         private int[,] casesCavalier = new int[,] { { -1, -2 }, { +1, -2 }, { -2, -1 }, { +2, -1 },
@@ -41,7 +31,7 @@ namespace processAI1
         private double omega = 0.25; // coefficient d'evaluation de l'occupation du centre
 
 
-        public IA()
+        public Intelligence()
         {
             roiABouge = false;
             tourDroiteABouge = false;
@@ -49,7 +39,7 @@ namespace processAI1
         }
 
 
-        public void jouerCoup(int[] plateau, String[] coord, int joueur)
+        public Coup choisirCoup(int[] plateau, int joueur)
         {
             m_joueur = joueur;
             List<Coup> coupsPotentiels = new List<Coup>();
@@ -66,21 +56,10 @@ namespace processAI1
             List<Coup> coupsPossibles = filtrerMenaces(plateau, coupsPotentiels);
 
             // choisir un coup aleatoire parmi les coups autorises
-            Random rnd = new Random();
-            Coup coupJoue = choisirCoup(plateau, joueur, coupsPossibles);
-
-            if (coupJoue.estPetitRoque())
-            {
-                coord[0] = "petit roque";
-                coord[1] = "";
-            }else if (coupJoue.estGrandRoque()) { 
-                coord[0] = "grand roque";
-                coord[1] = "";
-            }else {
-                coord[0] = tabCoord[coupJoue.indexDepart];
-                coord[1] = tabCoord[coupJoue.indexArrivee];
-            }
+            Coup coupJoue = meilleurCoup(plateau, joueur, coupsPossibles);
             majInfoRoque(plateau, joueur, coupJoue);
+
+            return coupJoue;
         }
 
         // donne l'information sur le deplacement du roi et des tours pour savoir si un roque est faisable
@@ -181,9 +160,28 @@ namespace processAI1
             List<Coup> lc = new List<Coup>();
             lc.AddRange(coupsPionManger(plateau, joueur, i, j));
             lc.AddRange(coupsPionDeplacer(plateau, joueur, i, j));
+            gererPromotion(plateau, joueur, lc);
             return lc;
         }
 
+        private void gererPromotion(int[] plateau, int joueur, List<Coup> lc)
+        {
+            foreach(Coup c in lc)
+            {
+                if (joueur == 1 &&
+                    c.indexArrivee / 8 == 0)
+                {
+                    //promotion du joueur blanc
+                    c.setPromotion(); //active la promotion
+                }
+                if (joueur == -1 &&
+                    c.indexArrivee / 8 == 7)
+                {
+                    //promotion du joueur noir
+                    c.setPromotion();
+                }
+            }
+        }
 
         private List<Coup> coupsPionManger(int[] plateau, int joueur, int i, int j)
         {
@@ -465,7 +463,7 @@ namespace processAI1
             return false;
         }
 
-        private Coup choisirCoup(int[] plateau, int joueur, List<Coup> coupsPossibles)
+        private Coup meilleurCoup(int[] plateau, int joueur, List<Coup> coupsPossibles)
         {
             Coup c = coupsPossibles[0];
 
@@ -541,6 +539,7 @@ public class Coup
 {
     public int indexDepart; // indexe de la case de départ du coup
     public int indexArrivee; // indexe de la case d'arrivée du coup
+    private Boolean promotion; 
     private int roque;
     private int puissance;  // valeur du coup en terme d'efficacité
 
@@ -548,6 +547,7 @@ public class Coup
     {
         indexDepart = dep;
         indexArrivee = arr;
+        promotion = false;
         roque = 0;
         puissance = 0;
     }
@@ -580,6 +580,16 @@ public class Coup
     public Boolean estGrandRoque()
     {
         return roque == 2;
+    }
+
+    public void setPromotion()
+    {
+        promotion = true;
+    }
+
+    public Boolean estPromotion()
+    {
+        return promotion;
     }
 }
 
