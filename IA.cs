@@ -31,6 +31,15 @@ namespace processAI1
         private double gamma = 0.25; // coefficient d'evaluation de l'activite des pieces
         private double omega = 0.25; // coefficient d'evaluation de l'occupation du centre
 
+        private int[] centrageCase = new int[]{1,1,1,1,1,1,1,1,
+                                                1,2,2,2,2,2,2,1,
+                                                1,2,4,4,4,4,2,1,
+                                                1,2,4,8,8,4,2,1,
+                                                1,2,4,8,8,4,2,1,
+                                                1,2,4,4,4,4,2,1,
+                                                1,2,2,2,2,2,2,1,
+                                                1,1,1,1,1,1,1,1};
+
 
         public Intelligence()
         {
@@ -41,6 +50,17 @@ namespace processAI1
 
 
         public Coup choisirCoup(int[] plateau, int joueur)
+        {
+            List<Coup> coupsPossibles = listerCoupsPossibles(plateau, joueur);
+
+            // choisir un coup aleatoire parmi les coups autorises
+            Coup coupJoue = meilleurCoup(plateau, joueur, coupsPossibles);
+            majInfoRoque(plateau, joueur, coupJoue);
+
+            return coupJoue;
+        }
+
+        public List<Coup> listerCoupsPossibles(int[] plateau, int joueur)
         {
             m_joueur = joueur;
             List<Coup> coupsPotentiels = new List<Coup>();
@@ -56,11 +76,7 @@ namespace processAI1
             // verifier que le coup ne met pas le roi du joueur en echec
             List<Coup> coupsPossibles = filtrerMenaces(plateau, coupsPotentiels);
 
-            // choisir un coup aleatoire parmi les coups autorises
-            Coup coupJoue = meilleurCoup(plateau, joueur, coupsPossibles);
-            majInfoRoque(plateau, joueur, coupJoue);
-
-            return coupJoue;
+            return coupsPossibles;
         }
 
         // donne l'information sur le deplacement du roi et des tours pour savoir si un roque est faisable
@@ -558,8 +574,8 @@ namespace processAI1
             int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
             double score = alpha * evalEchange(plateau, c) +
                            beta * evalProtection(nouveauPlateau, joueur) +
-                           gamma * evalCentre(plateau, c) +
-                           omega * evalActivite(plateau, c);
+                           gamma * evalCentre(nouveauPlateau, c, joueur) +
+                           omega * evalActivite(nouveauPlateau, c, joueur);
             return (int)(score);
         }
 
@@ -583,6 +599,7 @@ namespace processAI1
             
             return cible;
             */
+            
             return 1;
         }
 
@@ -625,15 +642,23 @@ namespace processAI1
         }
 
         // evaluation de l'occupation du centre apres le coup
-        private int evalCentre(int[] plateau, Coup c)
+        private int evalCentre(int[] plateauApresCoup, Coup c, int joueur)
         {
-            return 1;
+            List<Coup> coupsPossibles = listerCoupsPossibles(plateauApresCoup, joueur);
+            int score = 0;
+            for (int i = 0; i < coupsPossibles.Count; i++)
+            {
+                score += centrageCase[coupsPossibles[i].indexArrivee];
+            }
+            return (int)((score / 1176) * 100);
         }
 
         // evaluation de l'activite des pieces apres le coup
-        private int evalActivite(int[] plateau, Coup c)
+        private int evalActivite(int[] plateauApresCoup, Coup c, int joueur)
         {
-            return 1;
+            List<Coup> coupsPossibles = listerCoupsPossibles(plateauApresCoup, joueur);
+            int score = coupsPossibles.Count;
+            return (int)((score / 147) * 100);
         }
 
         private List<int> casesAdjacentes(int i, int j)
