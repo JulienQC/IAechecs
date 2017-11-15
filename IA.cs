@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace processAI1
 {
@@ -43,7 +44,7 @@ namespace processAI1
         {
             m_joueur = joueur;
             List<Coup> coupsPotentiels = new List<Coup>();
-            
+
             for (int i = 0; i < plateau.Length; i++)
             {
                 if (joueur * plateau[i] > 0) //liste des pieces du joueur
@@ -96,19 +97,16 @@ namespace processAI1
             int nlRoi, ncRoi; // nouvelle ligne et colonne du roi du joueur
             foreach (Coup c in lc)
             {
-                if(c.estPetitRoque() || !c.estGrandRoque())
+                if (c.estPetitRoque() || !c.estGrandRoque())
                 { // la verification des menaces est deja incluse dans le calcul des coups de roque
 
                     coupsPossibles.Add(c);
                 }
-                else 
+                else
                 {
                     nlRoi = lRoi; ncRoi = cRoi;
                     //jouer fictivement le coup sur un nouveau plateau
-                    int[] nouveauPlateau = new int[plateau.Length];
-                    Array.Copy(plateau, nouveauPlateau, plateau.Length);
-                    nouveauPlateau[c.indexDepart] = 0;
-                    nouveauPlateau[c.indexArrivee] = plateau[c.indexDepart];
+                    int[] nouveauPlateau = plateauApresCoup(plateau, m_joueur, c);
 
                     //calculer la nouvelle position du roi du joueur s'il s'est deplace
                     if (m_joueur * plateau[c.indexDepart] == R)
@@ -118,7 +116,7 @@ namespace processAI1
                     }
 
                     //ajouter le coup aux coups possibles s'il ne met pas en danger le roi du joueur
-                    if (!pieceMenacee(nouveauPlateau, m_joueur, nlRoi, ncRoi))
+                    if (!estMenacee(nouveauPlateau, m_joueur, nlRoi, ncRoi))
                     {
                         coupsPossibles.Add(c);
                     }
@@ -127,7 +125,26 @@ namespace processAI1
 
             return coupsPossibles;
         }
-        
+
+        private int[] plateauApresCoup(int[] plateau, int joueur, Coup c)
+        {
+            int[] nouveauPlateau = new int[plateau.Length];
+            Array.Copy(plateau, nouveauPlateau, plateau.Length);
+            nouveauPlateau[c.indexDepart] = 0;
+            nouveauPlateau[c.indexArrivee] = plateau[c.indexDepart];
+            //deplacer les tours en cas de roque
+            if (c.estPetitRoque())
+            {
+                nouveauPlateau[coordToIndex(7 * ((joueur + 1) / 2), 5)] = joueur * TD;
+            }
+            else if (c.estGrandRoque())
+            {
+                nouveauPlateau[coordToIndex(7 * ((joueur + 1) / 2), 3)] = joueur * TG;
+            }
+            return nouveauPlateau;
+        }
+
+
         //retourne la liste des coups possibles pour la piece situee a l'index donne
         private List<Coup> listeCoups(int[] plateau, int index)
         {
@@ -147,7 +164,7 @@ namespace processAI1
                 case TD:
                     return coupsTour(plateau, m_joueur, i, j);
                 case D:
-                    return coupsDame(plateau, m_joueur, i, j);                    
+                    return coupsDame(plateau, m_joueur, i, j);
                 case R:
                     return coupsRoi(plateau, m_joueur, i, j);
                 default:
@@ -166,7 +183,7 @@ namespace processAI1
 
         private void gererPromotion(int[] plateau, int joueur, List<Coup> lc)
         {
-            foreach(Coup c in lc)
+            foreach (Coup c in lc)
             {
                 if (joueur == 1 &&
                     c.indexArrivee / 8 == 0)
@@ -209,17 +226,17 @@ namespace processAI1
             int index = coordToIndex(i, j);
 
             // le pion se deplace de +1 en i si c'est le joueur noir (joueur = -1), et de -1 sinon
-            if (dansTableau(i - joueur, j) && caseVide(plateau, i - joueur, j)) 
+            if (dansTableau(i - joueur, j) && caseVide(plateau, i - joueur, j))
             {
                 lc.Add(new Coup(index, coordToIndex(i - joueur, j)));
             }
 
             int ligneDepart;
-            if(joueur == 1) ligneDepart = 6;
-            else            ligneDepart = 1;
+            if (joueur == 1) ligneDepart = 6;
+            else ligneDepart = 1;
 
             // cas où le pion est sur sa ligne de depart: il peut avancer de 2 cases
-            if(i == ligneDepart && caseVide(plateau, i - joueur * 2, j))
+            if (i == ligneDepart && caseVide(plateau, i - joueur * 2, j))
             {
                 lc.Add(new Coup(index, coordToIndex(i - joueur * 2, j)));
             }
@@ -233,7 +250,7 @@ namespace processAI1
             int index = coordToIndex(i, j);
 
             int x, y;
-            for(int k = 0; k < casesCavalier.GetLength(0); k++)
+            for (int k = 0; k < casesCavalier.GetLength(0); k++)
             {
                 x = i + casesCavalier[k, 0];
                 y = j + casesCavalier[k, 1];
@@ -244,10 +261,11 @@ namespace processAI1
                     lc.Add(new Coup(index, coordToIndex(x, y)));
                 }
             }
-            
+
             return lc;
         }
 
+        // coup possible pour un fou de la couleur du joueur en case (i, j)
         private List<Coup> coupsFou(int[] plateau, int joueur, int i, int j)
         {
             List<Coup> lc = new List<Coup>();
@@ -291,7 +309,7 @@ namespace processAI1
                 dirY = this.directionTour[dirIndex, 1];
                 y = i + dirY;
                 x = j + dirX;
-                
+
                 // avancer dans la diagonale tant qu'il y a des case vides
                 while (dansTableau(y, x) && caseVide(plateau, y, x))
                 {
@@ -299,6 +317,7 @@ namespace processAI1
                     y += dirY;
                     x += dirX;
                 }
+
                 // si l'obstacle est une piece ennemie, on peut la manger
                 if (dansTableau(y, x) && pieceEnnemie(plateau, joueur, y, x))
                 {
@@ -357,9 +376,9 @@ namespace processAI1
 
             // petit roque:
             if (!roiABouge && !tourDroiteABouge &&
-               !pieceMenacee(plateau, joueur, i, j) &&
-               !pieceMenacee(plateau, joueur, i, j + 1) &&
-               !pieceMenacee(plateau, joueur, i, j + 2))
+               !estMenacee(plateau, joueur, i, j) &&
+               !estMenacee(plateau, joueur, i, j + 1) &&
+               !estMenacee(plateau, joueur, i, j + 2))
             {
                 Coup c = new Coup(index, coordToIndex(i, j + 2));
                 c.setPetitRoque();
@@ -370,9 +389,9 @@ namespace processAI1
 
             //grand roque
             if (!roiABouge && !tourGaucheABouge &&
-                !pieceMenacee(plateau, joueur, i, j) &&
-                !pieceMenacee(plateau, joueur, i, j - 1) &&
-                !pieceMenacee(plateau, joueur, i, j - 2))
+                !estMenacee(plateau, joueur, i, j) &&
+                !estMenacee(plateau, joueur, i, j - 1) &&
+                !estMenacee(plateau, joueur, i, j - 2))
             {
                 Coup c = new Coup(index, coordToIndex(i, j - 2));
                 c.setGrandRoque();
@@ -413,35 +432,57 @@ namespace processAI1
             return (plateau[coordToIndex(i, j)] == 0);
         }
 
-        //retourne true ssi la piece en position (i, j) est menacee dans la position t
-        private Boolean pieceMenacee(int[] plateau, int joueur, int i, int j)
+        // renvoie la liste des indexes des pions de l'ennemi du joueur qui menacent la case (i, j) 
+        private List<int> menacesPion(int[] plateau, int joueur, int i, int j)
         {
+            List<int> indexes = new List<int>();
+            List<Coup> pionsPotentiels = coupsPionManger(plateau, joueur, i, j);
+            foreach (Coup c in pionsPotentiels)
+            {
+                if (plateau[c.indexArrivee] == -1 * joueur * P)
+                {
+                    indexes.Add(c.indexArrivee);
+                }
+            }
+            return indexes;
+        }
+
+        // renvoie la liste des indexes des cavaliers de l'ennemi du joueur qui menacent la case (i, j)
+        private List<int> menacesCavalier(int[] plateau, int joueur, int i, int j)
+        {
+            List<int> indexes = new List<int>();
             List<Coup> cavaliersPotentiels = coupsCavalier(plateau, joueur, i, j);
             foreach (Coup c in cavaliersPotentiels)
             {
                 if (plateau[c.indexArrivee] == -1 * joueur * CG ||
                     plateau[c.indexArrivee] == -1 * joueur * CD)
                 {
-                    return true;
+                    indexes.Add(c.indexArrivee);
                 }
             }
-            List<Coup> pionsPotentiels = coupsPionManger(plateau, joueur, i, j);
-            foreach (Coup c in pionsPotentiels)
-            {
-                if (plateau[c.indexArrivee] == -1 * joueur * P)
-                {
-                    return true;
-                }
-            }
+            return indexes;
+        }
+
+        // renvoie la liste des indexes des fous / dames de l'ennemi du joueur qui menacent la case (i, j)
+        private List<int> menacesFou(int[] plateau, int joueur, int i, int j)
+        {
+            List<int> indexes = new List<int>();
             List<Coup> fousPotentiels = coupsFou(plateau, joueur, i, j);
             foreach (Coup c in fousPotentiels)
             {
                 if (plateau[c.indexArrivee] == -1 * joueur * F ||
                     plateau[c.indexArrivee] == -1 * joueur * D)
                 {
-                    return true;
+                    indexes.Add(c.indexArrivee);
                 }
             }
+            return indexes;
+        }
+
+        // renvoie la liste des indexes des tours / dames de l'ennemi du joueur qui menacent la case (i, j)
+        private List<int> menacesTour(int[] plateau, int joueur, int i, int j)
+        {
+            List<int> indexes = new List<int>();
             List<Coup> toursPotentiels = coupsTour(plateau, joueur, i, j);
             foreach (Coup c in toursPotentiels)
             {
@@ -449,28 +490,57 @@ namespace processAI1
                     plateau[c.indexArrivee] == -1 * joueur * TD ||
                     plateau[c.indexArrivee] == -1 * joueur * D)
                 {
-                    return true;
+                    indexes.Add(c.indexArrivee);
                 }
             }
+            return indexes;
+        }
+
+        //renvoie l'indexe de la case du roi ennemi si ce dernier peut aller en case (i, j)
+        private List<int> menacesRoi(int[] plateau, int joueur, int i, int j)
+        {
+            List<int> indexes = new List<int>();
             List<Coup> roisPotentiels = coupsRoiClassiques(plateau, joueur, i, j);
             foreach (Coup c in roisPotentiels)
             {
                 if (plateau[c.indexArrivee] == -1 * joueur * R)
                 {
-                    return true;
+                    indexes.Add(c.indexArrivee);
                 }
             }
-            return false;
+            return indexes;
+        }
+
+        private List<int> menaces(int[] plateau, int joueur, int i, int j)
+        {
+            List<int> indexes = new List<int>();
+
+            indexes.AddRange(menacesPion(plateau, joueur, i, j));
+            indexes.AddRange(menacesCavalier(plateau, joueur, i, j));
+            indexes.AddRange(menacesFou(plateau, joueur, i, j));
+            indexes.AddRange(menacesRoi(plateau, joueur, i, j));
+
+            return indexes;
+        }
+
+        //retourne true ssi la piece en position (i, j) du joueur est menacee dans la position decrite par le plateau
+        private Boolean estMenacee(int[] plateau, int joueur, int i, int j)
+        {
+            return (menacesPion(plateau, joueur, i, j).Any() ||
+                menacesCavalier(plateau, joueur, i, j).Any() ||
+                menacesFou(plateau, joueur, i, j).Any() ||
+                menacesTour(plateau, joueur, i, j).Any() ||
+                menacesRoi(plateau, joueur, i, j).Any());
         }
 
         private Coup meilleurCoup(int[] plateau, int joueur, List<Coup> coupsPossibles)
         {
             Coup c = coupsPossibles[0];
 
-            int scoreMax = eval(plateau, coupsPossibles[0]);
+            int scoreMax = eval(plateau, joueur, coupsPossibles[0]);
             for (int i = 0; i < coupsPossibles.Count; i++)
             {
-                int score = eval(plateau, coupsPossibles[i]);
+                int score = eval(plateau, joueur, coupsPossibles[i]);
                 coupsPossibles[i].setPuissance(score);
                 if (score > scoreMax)
                 {
@@ -484,9 +554,10 @@ namespace processAI1
 
 
         // retourne un score pour le coup (un grand score correspond a un bon coup)
-        private int eval(int[] plateau, Coup c) {
+        private int eval(int[] plateau, int joueur, Coup c) {
+            int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
             double score = alpha * evalEchange(plateau, c) +
-                           beta * evalProtection(plateau, c) +
+                           beta * evalProtection(nouveauPlateau, joueur) +
                            gamma * evalCentre(plateau, c) +
                            omega * evalActivite(plateau, c);
             return (int)(score);
@@ -515,10 +586,42 @@ namespace processAI1
             return 1;
         }
 
-        // evaluation de la protection du roi apres le coup
-        private int evalProtection(int[] plateau, Coup c)
+        private int positionRoi(int[] plateau, int joueur)
         {
-            return 1;
+            int i = 0;
+            while(i < 64 && plateau[i] != joueur * R) { i++; }
+            return i;
+        }
+
+        // evaluation de la protection du roi apres le coup
+        private int evalProtection(int[] plateau, int joueur)
+        {
+            double score = 0;
+
+            int indexRoi = positionRoi(plateau, joueur);
+            int i = indexRoi / 8;
+            int j = indexRoi % 8;
+
+            // somme les menaces des pieces adverse ayant le roi en ligne de mire avec un coeff de 4
+            score += 4 * enLigneMireFou(plateau, joueur, indexRoi);
+            score += 4 * enLigneMireTour(plateau, joueur, indexRoi);
+
+            List<int> indexesMenaces;
+            foreach(int index in casesAdjacentes(i, j))
+            {
+                indexesMenaces = menaces(plateau, joueur, i, j);
+                // somme les valeurs des pieces menacant les cases adjacentes du roi avec un coeff de 2
+                foreach(int idx in indexesMenaces)
+                {
+                    score += valeurPiece(plateau, idx) * 2;
+                }
+                // somme les menaces des pieces adverse ayant une case adjacente au roi en ligne de mire
+                score += enLigneMireFou(plateau, joueur, index);
+                score += enLigneMireTour(plateau, joueur, index);
+            }
+            
+
+            return (int) score;
         }
 
         // evaluation de l'occupation du centre apres le coup
@@ -532,64 +635,197 @@ namespace processAI1
         {
             return 1;
         }
+
+        private List<int> casesAdjacentes(int i, int j)
+        {
+            List<int> cases = new List<int>();
+            for (int y = -1; y < 2; y++)
+            {
+                for (int x = -1; x < 2; x++)
+                {
+                    if (!(x == 0 && y == 0) && dansTableau(y + i, x + j))
+                    {
+                        cases.Add(coordToIndex(y + i, x + j));
+                    }
+                }
+            }
+            return cases;
+        }
+
+        private double valeurPiece(int[] plateau, int index){
+            switch(plateau[index])
+            {
+                case P:
+                    return 1;
+                case CG:
+                case CD:
+                    return 3;
+                case F:
+                    return 3.5;
+                case TG:
+                case TD:
+                    return 5;
+                case D:
+                    return 8;
+                default:
+                    return 0;
+            }
+        }
+
+        // renvoie un double dans [0, inf[ indiquant la force de la menace des fous / dames
+        // de l'ennemi du joueur qui pese sur la case (i, j) 
+        private double enLigneMireFou(int[] plateau, int joueur, int index)
+        {
+            double score = 0;
+            int i = index / 8;
+            int j = index % 8;
+
+            int dirX, dirY, x, y, coeff;
+            for (int dirIndex = 0; dirIndex < directionFou.GetLength(0); dirIndex++)
+            {
+                dirX = directionFou[dirIndex, 0];
+                dirY = directionFou[dirIndex, 1];
+                y = i + dirY;
+                x = j + dirX;
+                coeff = 4; // on suppose qu'une piece n'est plus une menace si plus de 2 pieces alliees font obstacle
+
+                // avancer dans la diagonale tant qu'il y a des case vides
+                while (dansTableau(y, x))
+                {
+                    if(pieceAlliee(plateau, joueur, y, x))
+                    {
+                        coeff /= 2;
+                    }
+                    if(coeff < 4 && // ne pas prendre en compte les pieces en contact direct
+                       (plateau[coordToIndex(y, x)] * joueur == F ||
+                        plateau[coordToIndex(y, x)] * joueur == D))
+                    {
+                        score += valeurPiece(plateau, coordToIndex(y, x)) * coeff;
+                    }
+                    y += dirY;              
+                    x += dirX;
+                }
+            }
+
+            return score;
+        }
+
+        // renvoie un double dans [0, inf[ indiquant la force de la menace des tours / dames
+        // de l'ennemi du joueur qui pese sur la case (i, j) 
+        private double enLigneMireTour(int[] plateau, int joueur, int index)
+        {
+            double score = 0;
+            int i = index / 8;
+            int j = index % 8;
+
+            int dirX, dirY, x, y, coeff;
+            for (int dirIndex = 0; dirIndex < directionTour.GetLength(0); dirIndex++)
+            {
+                dirX = directionTour[dirIndex, 0];
+                dirY = directionTour[dirIndex, 1];
+                y = i + dirY;
+                x = j + dirX;
+                coeff = 4; // on suppose qu'une piece n'est plus une menace si plus de 2 pieces alliees font obstacle
+
+                // avancer dans la diagonale tant qu'il y a des case vides
+                while (dansTableau(y, x))
+                {
+                    if (pieceAlliee(plateau, joueur, y, x))
+                    {
+                        coeff /= 2;
+                    }
+                    if (coeff < 4 && // ne pas prendre en compte les pieces en contact direct
+                        (plateau[coordToIndex(y, x)] * joueur == TG ||
+                         plateau[coordToIndex(y, x)] * joueur == TD ||
+                         plateau[coordToIndex(y, x)] * joueur == D))
+                    {
+                        score += valeurPiece(plateau, coordToIndex(y, x)) * coeff;
+                    }
+                    y += dirY;
+                    x += dirX;
+                }
+            }
+
+            return score;
+        }
+    }
+
+
+    public class Coup
+    {
+        public int indexDepart; // indexe de la case de départ du coup
+        public int indexArrivee; // indexe de la case d'arrivée du coup
+        private Boolean promotion;
+        private int roque;
+        private int puissance;  // valeur du coup en terme d'efficacité
+
+        public Coup(int dep, int arr)
+        {
+            indexDepart = dep;
+            indexArrivee = arr;
+            promotion = false;
+            roque = 0;
+            puissance = 0;
+        }
+
+        public void setPuissance(int p)
+        {
+            puissance = p;
+        }
+
+        public int getPuissance()
+        {
+            return puissance;
+        }
+
+        public void setPetitRoque()
+        {
+            roque = 1;
+        }
+
+        public void setGrandRoque()
+        {
+            roque = 2;
+        }
+
+        public Boolean estPetitRoque()
+        {
+            return roque == 1;
+        }
+
+        public Boolean estGrandRoque()
+        {
+            return roque == 2;
+        }
+
+        public void setPromotion()
+        {
+            promotion = true;
+        }
+
+        public Boolean estPromotion()
+        {
+            return promotion;
+        }
+    }
+
+    public class Piece
+    {
+        private int id; //type de la piece (pion, cavalier, fou, ...)
+        private int indexCase;
+        private int valeur; //valeur de la piece dans une position donnée 
+
+        public Piece(int i, int c, int v)
+        {
+            id = i;
+            c = 
+            valeur = v;
+        }
+
+        public int getValeur()
+        {
+            return valeur;
+        }
+        
     }
 }
-
-public class Coup
-{
-    public int indexDepart; // indexe de la case de départ du coup
-    public int indexArrivee; // indexe de la case d'arrivée du coup
-    private Boolean promotion; 
-    private int roque;
-    private int puissance;  // valeur du coup en terme d'efficacité
-
-    public Coup(int dep, int arr)
-    {
-        indexDepart = dep;
-        indexArrivee = arr;
-        promotion = false;
-        roque = 0;
-        puissance = 0;
-    }
-
-    public void setPuissance(int p)
-    {
-        puissance = p;
-    }
-
-    public int getPuissance()
-    {
-        return puissance;
-    }
-
-    public void setPetitRoque()
-    {
-        roque = 1;
-    }
-
-    public void setGrandRoque()
-    {
-        roque = 2;
-    }
-
-    public Boolean estPetitRoque()
-    {
-        return roque == 1;
-    }
-
-    public Boolean estGrandRoque()
-    {
-        return roque == 2;
-    }
-
-    public void setPromotion()
-    {
-        promotion = true;
-    }
-
-    public Boolean estPromotion()
-    {
-        return promotion;
-    }
-}
-
