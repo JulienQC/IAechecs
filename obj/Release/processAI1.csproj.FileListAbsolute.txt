@@ -1,0 +1,14 @@
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\bin\Release\processAI1.exe.config
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\bin\Release\processAI1.exe
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\bin\Release\processAI1.pdb
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.csprojResolveAssemblyReference.cache
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.csproj.CoreCompileInputs.cache
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.exe
+C:\Users\Benjamin\Documents\Divers\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.pdb
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\bin\Release\processAI1.exe.config
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\bin\Release\processAI1.exe
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\bin\Release\processAI1.pdb
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.csprojResolveAssemblyReference.cache
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.csproj.CoreCompileInputs.cache
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.exe
+C:\Users\Benjamin\Documents\Divers\Documents\Ecoles\UQAC\workspace\8INF846 - Intelligence Artificielle\Plateforme de base\processAI1\processAI1\obj\Release\processAI1.pdb

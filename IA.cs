@@ -15,10 +15,13 @@ namespace processAI1
         private const int D = 5; //dame
         private const int R = 6; //roi
 
-        private int[,] directionFou = new int[,] { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
-        private int[,] directionTour = new int[,] { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
+        private int[,] directionFou = new int[,] { { +1, +1 }, { +1, -1 }, { -1, +1 }, { -1, -1 } };
+        private int[,] directionTour = new int[,] { { +1, 0 }, { 0, +1 }, { -1, 0 }, { 0, -1 } };
         private int[,] casesCavalier = new int[,] { { -1, -2 }, { +1, -2 }, { -2, -1 }, { +2, -1 },
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
+
+        private Dictionary<int, int> heuristiqueEchange = new Dictionary<int, int>() { { PP, 1 }, { P, 1 }, { CG, 3 }, { CD, 3 },
+                                                                                       { F, 4 }, { TG, 5 }, { TD, 5 }, { D, 8 } };
 
         private int m_joueur; // couleur du joueur (blanc: 1; noir: -1)
         private Boolean roiABouge;
@@ -413,6 +416,19 @@ namespace processAI1
             return (plateau[coordToIndex(i, j)] == 0);
         }
 
+        private List<Coup> piecesDeplacementPotentiels(int[] plateau, int joueur, int i, int j)
+        {
+            List<Coup> coupsPotentiels = new List<Coup>();
+
+            coupsPotentiels.AddRange(coupsCavalier(plateau, joueur, i, j));
+            coupsPotentiels.AddRange(coupsPionManger(plateau, joueur, i, j));
+            coupsPotentiels.AddRange(coupsFou(plateau, joueur, i, j));
+            coupsPotentiels.AddRange(coupsTour(plateau, joueur, i, j));
+            coupsPotentiels.AddRange(coupsRoiClassiques(plateau, joueur, i, j));
+
+            return coupsPotentiels;
+        }
+
         //retourne true ssi la piece en position (i, j) est menacee dans la position t
         private Boolean pieceMenacee(int[] plateau, int joueur, int i, int j)
         {
@@ -485,6 +501,12 @@ namespace processAI1
 
         // retourne un score pour le coup (un grand score correspond a un bon coup)
         private int eval(int[] plateau, Coup c) {
+
+            int pieceEchangee = plateau[c.indexArrivee];
+            Console.Out.WriteLine(pieceEchangee);
+            Console.Out.WriteLine(c.indexArrivee);
+            Console.Out.WriteLine("test");
+
             double score = alpha * evalEchange(plateau, c) +
                            beta * evalProtection(plateau, c) +
                            gamma * evalCentre(plateau, c) +
@@ -495,24 +517,16 @@ namespace processAI1
         // evaluation de l'echange implique par le coup
         private int evalEchange(int[] plateau, Coup c)
         {
-            /*
-            int cible = valeurPiece(pieceCible);
-            List<Piece> protecteurs;
-            List<Piece> attaquants;
-            int val;
-            while(protecteurs.Any() && attaquants.Any())
+            int pieceEchangee = plateau[c.indexArrivee];
+
+            if (pieceEchangee == 0)
             {
-                cible -= valeurPiece(protecteurs.RemoveAt(0)); // on perd la piece mangee par le protecteur
-                cible += valeurPiece(attaquants.RemoveAt(0)); ; // on gagne la piece mangee par l'attaquant
+                return 0;
             }
-            if (protecteurs.Any())
+            else
             {
-                cible -= valeurPiece(protecteurs.RemoveAt(0)); // s'il ne reste que des protecteurs, on perd le dernier des attaquants
-            }           
-            
-            return cible;
-            */
-            return 1;
+                return this.heuristiqueEchange[pieceEchangee];
+            }
         }
 
         // evaluation de la protection du roi apres le coup
