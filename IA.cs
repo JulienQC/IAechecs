@@ -260,7 +260,6 @@ namespace processAI1
 
                 if (dansTableau(x, y) && !pieceAlliee(plateau, joueur, x, y))
                 {
-
                     lc.Add(new Coup(index, coordToIndex(x, y)));
                 }
             }
@@ -381,7 +380,8 @@ namespace processAI1
             if (!roiABouge && !tourDroiteABouge &&
                !estMenacee(plateau, joueur, i, j) &&
                !estMenacee(plateau, joueur, i, j + 1) &&
-               !estMenacee(plateau, joueur, i, j + 2))
+               !estMenacee(plateau, joueur, i, j + 2) &&
+               caseVide(plateau, i, j))
             {
                 Coup c = new Coup(index, coordToIndex(i, j + 2));
                 c.setPetitRoque();
@@ -394,7 +394,8 @@ namespace processAI1
             if (!roiABouge && !tourGaucheABouge &&
                 !estMenacee(plateau, joueur, i, j) &&
                 !estMenacee(plateau, joueur, i, j - 1) &&
-                !estMenacee(plateau, joueur, i, j - 2))
+                !estMenacee(plateau, joueur, i, j - 2) &&
+                caseVide(plateau, i, j))
             {
                 Coup c = new Coup(index, coordToIndex(i, j - 2));
                 c.setGrandRoque();
@@ -589,7 +590,7 @@ namespace processAI1
                 return 0;
             }
             else
-            {
+			{
                 return this.heuristiqueEchange[-1 * joueur * pieceEchangee];
             }
         }
