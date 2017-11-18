@@ -657,9 +657,13 @@ namespace processAI1
         {
             List<Coup> coupsPossibles = listerCoupsPossibles(plateauApresCoup, joueur);
             double score = 0;
-            foreach(Coup c in coupsPossibles)
+            if (coupsPossibles.Any())
             {
-                score += centrageCase[c.indexArrivee];
+                score += centrageCase[coupsPossibles[0].indexArrivee];
+                foreach (Coup c in coupsPossibles)
+                {
+                    score += centrageCase[c.indexArrivee];
+                }
             }
             return (int)((score / 1176) * 100);
         }
