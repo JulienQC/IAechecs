@@ -255,7 +255,7 @@ namespace processAI1
             else ligneDepart = 1;
 
             // cas où le pion est sur sa ligne de depart: il peut avancer de 2 cases
-            if (i == ligneDepart && caseVide(plateau, i - joueur * 2, j))
+            if (i == ligneDepart && caseVide(plateau, i - joueur, j) && caseVide(plateau, i - joueur * 2, j))
             {
                 lc.Add(new Coup(index, coordToIndex(i - joueur * 2, j)));
             }
