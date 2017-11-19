@@ -21,10 +21,9 @@ namespace processAI1
         private int[,] casesCavalier = new int[,] { { -1, -2 }, { +1, -2 }, { -2, -1 }, { +2, -1 },
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
 
-        private Dictionary<int, int> heuristiqueEchange = new Dictionary<int, int>() { { PP, 1 }, { P, 1 }, { CG, 3 }, { CD, 3 },
-                                                                                       { F, 4 }, { TG, 5 }, { TD, 5 }, { D, 8 } };
-
-        private int m_joueur; // couleur du joueur (blanc: 1; noir: -1)
+        private Dictionary<int, double> valeurPiece = new Dictionary<int, double>() { {0, 0 }, { PP, 1 }, { P, 1 }, { CG, 3 }, { CD, 3 },
+                                                                                      { F, 3.5 }, { TG, 5 }, { TD, 5 }, { D, 9 }};
+        
         private Boolean roiABouge;
         private Boolean tourDroiteABouge;
         private Boolean tourGaucheABouge;
@@ -43,6 +42,14 @@ namespace processAI1
                                                 1,2,2,2,2,2,2,1,
                                                 1,1,1,1,1,1,1,1};
 
+        String[] tabCoord = new string[] { "a8","b8","c8","d8","e8","f8","g8","h8",
+                                           "a7","b7","c7","d7","e7","f7","g7","h7",
+                                           "a6","b6","c6","d6","e6","f6","g6","h6",
+                                           "a5","b5","c5","d5","e5","f5","g5","h5",
+                                           "a4","b4","c4","d4","e4","f4","g4","h4",
+                                           "a3","b3","c3","d3","e3","f3","g3","h3",
+                                           "a2","b2","c2","d2","e2","f2","g2","h2",
+                                           "a1","b1","c1","d1","e1","f1","g1","h1" };
 
         public Intelligence()
         {
@@ -56,7 +63,14 @@ namespace processAI1
         {
             List<Coup> coupsPossibles = listerCoupsPossibles(plateau, joueur);
 
-            // choisir un coup aleatoire parmi les coups autorises
+            /*
+            foreach (Coup c in coupsPossibles)
+            {
+                Console.Write(tabCoord[c.indexDepart] + " " + tabCoord[c.indexArrivee] + ": " + eval(plateau, joueur, c) + "\n");
+            }
+            System.Threading.Thread.Sleep(1000);
+            */
+
             Coup coupJoue = meilleurCoup(plateau, joueur, coupsPossibles);
             majInfoRoque(plateau, joueur, coupJoue);
 
@@ -65,19 +79,18 @@ namespace processAI1
 
         public List<Coup> listerCoupsPossibles(int[] plateau, int joueur)
         {
-            m_joueur = joueur;
             List<Coup> coupsPotentiels = new List<Coup>();
 
             for (int i = 0; i < plateau.Length; i++)
             {
                 if (joueur * plateau[i] > 0) //liste des pieces du joueur
                 {
-                    coupsPotentiels.AddRange(listeCoups(plateau, i));
+                    coupsPotentiels.AddRange(listeCoups(plateau, joueur, i));
                 }
             }
 
             // verifier que le coup ne met pas le roi du joueur en echec
-            List<Coup> coupsPossibles = filtrerMenaces(plateau, coupsPotentiels);
+            List<Coup> coupsPossibles = filtrerMenaces(plateau, joueur, coupsPotentiels);
 
             return coupsPossibles;
         }
@@ -99,24 +112,17 @@ namespace processAI1
             }
         }
 
-        private List<Coup> filtrerMenaces(int[] plateau, List<Coup> lc)
+        private List<Coup> filtrerMenaces(int[] plateau, int joueur, List<Coup> lc)
         {
             List<Coup> coupsPossibles = new List<Coup>();
 
-            int lRoi = 0, cRoi = 0; //ligne et colonne du roi du joueur
-            for (int i = 0; i < plateau.Length; i++)
-            {
-                if (m_joueur * plateau[i] == R)
-                {
-                    lRoi = i / 8;
-                    cRoi = i % 8;
-                }
-            }
+            int posRoi = positionRoi(plateau, joueur);
+            int lRoi = posRoi / 8, cRoi = posRoi % 8; //ligne et colonne du roi du joueur
 
             int nlRoi, ncRoi; // nouvelle ligne et colonne du roi du joueur
             foreach (Coup c in lc)
             {
-                if (c.estPetitRoque() || !c.estGrandRoque())
+                if (c.estPetitRoque() || c.estGrandRoque())
                 { // la verification des menaces est deja incluse dans le calcul des coups de roque
 
                     coupsPossibles.Add(c);
@@ -125,17 +131,17 @@ namespace processAI1
                 {
                     nlRoi = lRoi; ncRoi = cRoi;
                     //jouer fictivement le coup sur un nouveau plateau
-                    int[] nouveauPlateau = plateauApresCoup(plateau, m_joueur, c);
+                    int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
 
                     //calculer la nouvelle position du roi du joueur s'il s'est deplace
-                    if (m_joueur * plateau[c.indexDepart] == R)
+                    if (joueur * nouveauPlateau[c.indexArrivee] == R)
                     {
                         nlRoi = c.indexArrivee / 8;
                         ncRoi = c.indexArrivee % 8;
                     }
 
                     //ajouter le coup aux coups possibles s'il ne met pas en danger le roi du joueur
-                    if (!estMenacee(nouveauPlateau, m_joueur, nlRoi, ncRoi))
+                    if (!estMenacee(nouveauPlateau, joueur, nlRoi, ncRoi))
                     {
                         coupsPossibles.Add(c);
                     }
@@ -143,6 +149,13 @@ namespace processAI1
             }
 
             return coupsPossibles;
+        }
+
+        private int positionRoi(int[] plateau, int joueur)
+        {
+            int i = 0;
+            while (i < 64 && plateau[i] != joueur * R) { i++; }
+            return i;
         }
 
         private int[] plateauApresCoup(int[] plateau, int joueur, Coup c)
@@ -163,9 +176,9 @@ namespace processAI1
             return nouveauPlateau;
         }
 
-
+     
         //retourne la liste des coups possibles pour la piece situee a l'index donne
-        private List<Coup> listeCoups(int[] plateau, int index)
+        private List<Coup> listeCoups(int[] plateau, int joueur, int index)
         {
             int i = index / 8; //numero de ligne
             int j = index % 8; //numero de colonne
@@ -173,19 +186,19 @@ namespace processAI1
             switch (Math.Abs(plateau[index]))
             {
                 case P:
-                    return coupsPion(plateau, m_joueur, i, j);
+                    return coupsPion(plateau, joueur, i, j);
                 case CG:
                 case CD:
-                    return coupsCavalier(plateau, m_joueur, i, j);
+                    return coupsCavalier(plateau, joueur, i, j);
                 case F:
-                    return coupsFou(plateau, m_joueur, i, j);
+                    return coupsFou(plateau, joueur, i, j);
                 case TG:
                 case TD:
-                    return coupsTour(plateau, m_joueur, i, j);
+                    return coupsTour(plateau, joueur, i, j);
                 case D:
-                    return coupsDame(plateau, m_joueur, i, j);
+                    return coupsDame(plateau, joueur, i, j);
                 case R:
-                    return coupsRoi(plateau, m_joueur, i, j);
+                    return coupsRoi(plateau, joueur, i, j);
                 default:
                     return new List<Coup>();
             }
@@ -395,9 +408,8 @@ namespace processAI1
             // petit roque:
             if (!roiABouge && !tourDroiteABouge &&
                !estMenacee(plateau, joueur, i, j) &&
-               !estMenacee(plateau, joueur, i, j + 1) &&
-               !estMenacee(plateau, joueur, i, j + 2) &&
-               caseVide(plateau, i, j))
+               !estMenacee(plateau, joueur, i, j + 1) && caseVide(plateau, i, j + 1) &&
+               !estMenacee(plateau, joueur, i, j + 2) && caseVide(plateau, i, j + 2))
             {
                 Coup c = new Coup(index, coordToIndex(i, j + 2));
                 c.setPetitRoque();
@@ -409,9 +421,8 @@ namespace processAI1
             //grand roque
             if (!roiABouge && !tourGaucheABouge &&
                 !estMenacee(plateau, joueur, i, j) &&
-                !estMenacee(plateau, joueur, i, j - 1) &&
-                !estMenacee(plateau, joueur, i, j - 2) &&
-                caseVide(plateau, i, j))
+                !estMenacee(plateau, joueur, i, j - 1) && caseVide(plateau, i, j - 1) &&
+                !estMenacee(plateau, joueur, i, j - 2) && caseVide(plateau, i, j - 2))
             {
                 Coup c = new Coup(index, coordToIndex(i, j - 2));
                 c.setGrandRoque();
@@ -428,8 +439,7 @@ namespace processAI1
             return i * 8 + j;
         }
 
-
-
+        
         private Boolean dansTableau(int i, int j)
         {
             return (i < 8 && i >= 0 && j < 8 && j >= 0);
@@ -450,19 +460,6 @@ namespace processAI1
         private Boolean caseVide(int[] plateau, int i, int j)
         {
             return (plateau[coordToIndex(i, j)] == 0);
-        }
-
-        private List<Coup> piecesDeplacementPotentiels(int[] plateau, int joueur, int i, int j)
-        {
-            List<Coup> coupsPotentiels = new List<Coup>();
-
-            coupsPotentiels.AddRange(coupsCavalier(plateau, joueur, i, j));
-            coupsPotentiels.AddRange(coupsPionManger(plateau, joueur, i, j));
-            coupsPotentiels.AddRange(coupsFou(plateau, joueur, i, j));
-            coupsPotentiels.AddRange(coupsTour(plateau, joueur, i, j));
-            coupsPotentiels.AddRange(coupsRoiClassiques(plateau, joueur, i, j));
-
-            return coupsPotentiels;
         }
 
         // renvoie la liste des indexes des pions de l'ennemi du joueur qui menacent la case (i, j) 
@@ -551,6 +548,7 @@ namespace processAI1
             indexes.AddRange(menacesPion(plateau, joueur, i, j));
             indexes.AddRange(menacesCavalier(plateau, joueur, i, j));
             indexes.AddRange(menacesFou(plateau, joueur, i, j));
+            indexes.AddRange(menacesTour(plateau, joueur, i, j));
             indexes.AddRange(menacesRoi(plateau, joueur, i, j));
 
             return indexes;
@@ -574,7 +572,7 @@ namespace processAI1
             for (int i = 0; i < coupsPossibles.Count; i++)
             {
                 int score = eval(plateau, joueur, coupsPossibles[i]);
-                coupsPossibles[i].setPuissance(score);
+                coupsPossibles[i].setScore(score);
                 if (score > scoreMax)
                 {
                     scoreMax = score;
@@ -587,17 +585,23 @@ namespace processAI1
 
 
         // retourne un score pour le coup (un grand score correspond a un bon coup)
-        private int eval(int[] plateau, int joueur, Coup c) {
+        private int eval(int[] plateau, int joueur, Coup c)
+        {
             int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
             double score = alpha * evalEchange(plateau, c, joueur) +
                            beta * evalProtection(nouveauPlateau, joueur) +
-                           gamma * evalCentre(nouveauPlateau, c, joueur) +
-                           omega * evalActivite(nouveauPlateau, c, joueur);
+                           gamma * evalCentre(nouveauPlateau, joueur) +
+                           omega * evalActivite(nouveauPlateau, joueur);
+            /*
+             * Console.Write(evalEchange(plateau, c, joueur) + "\t" + evalProtection(nouveauPlateau, joueur) + "\t" +
+                          evalCentre(nouveauPlateau, joueur) + "\t" + evalActivite(nouveauPlateau, c, joueur) + "\t" +
+                          (int)(score) + "\n");
+                          */
             return (int)(score);
         }
 
         // evaluation de l'echange implique par le coup
-        private int evalEchange(int[] plateau, Coup c, int joueur)
+        private double evalEchange(int[] plateau, Coup c, int joueur)
         {
             int pieceEchangee = plateau[c.indexArrivee];
 
@@ -606,20 +610,13 @@ namespace processAI1
                 return 0;
             }
             else
-			{
-                return this.heuristiqueEchange[-1 * joueur * pieceEchangee];
+            {
+                return valeurPiece[-1 * joueur * pieceEchangee];
             }
         }
 
-        private int positionRoi(int[] plateau, int joueur)
-        {
-            int i = 0;
-            while(i < 64 && plateau[i] != joueur * R) { i++; }
-            return i;
-        }
-
         // evaluation de la protection du roi apres le coup
-        private int evalProtection(int[] plateau, int joueur)
+        private double evalProtection(int[] plateau, int joueur)
         {
             double score = 0;
 
@@ -632,41 +629,51 @@ namespace processAI1
             score += 4 * enLigneMireTour(plateau, joueur, indexRoi);
 
             List<int> indexesMenaces;
-            foreach(int index in casesAdjacentes(i, j))
+            int piece;
+            foreach (int index in casesAdjacentes(i, j))
             {
-                indexesMenaces = menaces(plateau, joueur, i, j);
+                indexesMenaces = menaces(plateau, joueur, index / 8, index % 8);
+
                 // somme les valeurs des pieces menacant les cases adjacentes du roi avec un coeff de 2
-                foreach(int idx in indexesMenaces)
+                foreach (int idx in indexesMenaces)
                 {
-                    score += valeurPiece(plateau, idx) * 2;
+                    piece = Math.Abs(plateau[idx]);
+                    if(piece != R)
+                    {
+                        score += valeurPiece[piece] * 2;
+                    }
                 }
                 // somme les menaces des pieces adverse ayant une case adjacente au roi en ligne de mire
                 score += enLigneMireFou(plateau, joueur, index);
                 score += enLigneMireTour(plateau, joueur, index);
             }
-            
 
-            return (int) score;
+
+            return (100.0 / (score + 1));
         }
 
         // evaluation de l'occupation du centre apres le coup
-        private int evalCentre(int[] plateauApresCoup, Coup c, int joueur)
+        private double evalCentre(int[] plateauApresCoup, int joueur)
         {
             List<Coup> coupsPossibles = listerCoupsPossibles(plateauApresCoup, joueur);
-            int score = 0;
-            for (int i = 0; i < coupsPossibles.Count; i++)
+            double score = 0;
+            if (coupsPossibles.Any())
             {
-                score += centrageCase[coupsPossibles[i].indexArrivee];
+                score += centrageCase[coupsPossibles[0].indexArrivee];
+                foreach (Coup c in coupsPossibles)
+                {
+                    score += centrageCase[c.indexArrivee];
+                }
             }
             return (int)((score / 1176) * 100);
         }
 
         // evaluation de l'activite des pieces apres le coup
-        private int evalActivite(int[] plateauApresCoup, Coup c, int joueur)
+        private double evalActivite(int[] plateauApresCoup, int joueur)
         {
             List<Coup> coupsPossibles = listerCoupsPossibles(plateauApresCoup, joueur);
-            int score = coupsPossibles.Count;
-            return (int)((score / 147) * 100);
+            double score = coupsPossibles.Count;
+            return (score / 147) * 100;
         }
 
         private List<int> casesAdjacentes(int i, int j)
@@ -685,25 +692,6 @@ namespace processAI1
             return cases;
         }
 
-        private double valeurPiece(int[] plateau, int index){
-            switch(plateau[index])
-            {
-                case P:
-                    return 1;
-                case CG:
-                case CD:
-                    return 3;
-                case F:
-                    return 3.5;
-                case TG:
-                case TD:
-                    return 5;
-                case D:
-                    return 8;
-                default:
-                    return 0;
-            }
-        }
 
         // renvoie un double dans [0, inf[ indiquant la force de la menace des fous / dames
         // de l'ennemi du joueur qui pese sur la case (i, j) 
@@ -725,17 +713,17 @@ namespace processAI1
                 // avancer dans la diagonale tant qu'il y a des case vides
                 while (dansTableau(y, x))
                 {
-                    if(pieceAlliee(plateau, joueur, y, x))
+                    if (pieceAlliee(plateau, joueur, y, x))
                     {
                         coeff /= 2;
                     }
-                    if(coeff < 4 && // ne pas prendre en compte les pieces en contact direct
-                       (plateau[coordToIndex(y, x)] * joueur == F ||
-                        plateau[coordToIndex(y, x)] * joueur == D))
+                    if (coeff < 4 && // ne pas prendre en compte les pieces en contact direct
+                       (plateau[coordToIndex(y, x)] * joueur * -1 == F ||
+                        plateau[coordToIndex(y, x)] * joueur * -1 == D))
                     {
-                        score += valeurPiece(plateau, coordToIndex(y, x)) * coeff;
+                        score += valeurPiece[Math.Abs(plateau[coordToIndex(y, x)])] * coeff / 4;
                     }
-                    y += dirY;              
+                    y += dirY;
                     x += dirX;
                 }
             }
@@ -768,11 +756,11 @@ namespace processAI1
                         coeff /= 2;
                     }
                     if (coeff < 4 && // ne pas prendre en compte les pieces en contact direct
-                        (plateau[coordToIndex(y, x)] * joueur == TG ||
-                         plateau[coordToIndex(y, x)] * joueur == TD ||
-                         plateau[coordToIndex(y, x)] * joueur == D))
+                        (plateau[coordToIndex(y, x)] * joueur * -1 == TG ||
+                         plateau[coordToIndex(y, x)] * joueur * -1 == TD ||
+                         plateau[coordToIndex(y, x)] * joueur * -1 == D))
                     {
-                        score += valeurPiece(plateau, coordToIndex(y, x)) * coeff;
+                        score += valeurPiece[Math.Abs(plateau[coordToIndex(y, x)])] * coeff / 4;
                     }
                     y += dirY;
                     x += dirX;
@@ -781,7 +769,9 @@ namespace processAI1
 
             return score;
         }
+
     }
+
 
 
     public class Coup
@@ -790,7 +780,7 @@ namespace processAI1
         public int indexArrivee; // indexe de la case d'arrivée du coup
         private Boolean promotion;
         private int roque;
-        private int puissance;  // valeur du coup en terme d'efficacité
+        private double score;  // valeur du coup en terme d'efficacité
 
         public Coup(int dep, int arr)
         {
@@ -798,17 +788,17 @@ namespace processAI1
             indexArrivee = arr;
             promotion = false;
             roque = 0;
-            puissance = 0;
+            score = 0;
         }
 
-        public void setPuissance(int p)
+        public void setScore(double p)
         {
-            puissance = p;
+            score = p;
         }
 
-        public int getPuissance()
+        public double getScore()
         {
-            return puissance;
+            return score;
         }
 
         public void setPetitRoque()
@@ -840,25 +830,5 @@ namespace processAI1
         {
             return promotion;
         }
-    }
-
-    public class Piece
-    {
-        private int id; //type de la piece (pion, cavalier, fou, ...)
-        private int indexCase;
-        private int valeur; //valeur de la piece dans une position donnée 
-
-        public Piece(int i, int c, int v)
-        {
-            id = i;
-            c = 
-            valeur = v;
-        }
-
-        public int getValeur()
-        {
-            return valeur;
-        }
-        
     }
 }
