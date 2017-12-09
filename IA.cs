@@ -16,22 +16,28 @@ namespace processAI1
         private const int D = 5; //dame
         private const int R = 6; //roi
 
+        private const int EVAL_NEG_INF = -1;
+        private const int EVAL_POS_INF = 1 << 25;
+
         private int[,] directionFou = new int[,] { { +1, +1 }, { +1, -1 }, { -1, +1 }, { -1, -1 } };
         private int[,] directionTour = new int[,] { { +1, 0 }, { 0, +1 }, { -1, 0 }, { 0, -1 } };
         private int[,] casesCavalier = new int[,] { { -1, -2 }, { +1, -2 }, { -2, -1 }, { +2, -1 },
                                                     { -2, +1 }, { +2, +1 }, { -1, +2 }, { +1, +2 } };
 
         private Dictionary<int, double> valeurPiece = new Dictionary<int, double>() { {0, 0 }, { PP, 1 }, { P, 1 }, { CG, 3 }, { CD, 3 },
-                                                                                      { F, 3.5 }, { TG, 5 }, { TD, 5 }, { D, 9 }};
-        
+                                                                                      { F, 3.5 }, { TG, 5 }, { TD, 5 }, { D, 9 }, {R, 1 << 15} };
+
+        private int m_joueur;
+        private int maxDepth;
         private Boolean roiABouge;
         private Boolean tourDroiteABouge;
         private Boolean tourGaucheABouge;
+        private Coup coupAlphaBeta;
 
-        private double alpha = 0.25; // coefficient d'evaluation de la gestion des echanges
-        private double beta = 0.25; // coefficient d'evaluation de la protection du roi
-        private double gamma = 0.25; // coefficient d'evaluation de l'activite des pieces
-        private double omega = 0.25; // coefficient d'evaluation de l'occupation du centre
+        private double a = 100; // coefficient d'evaluation de la gestion des echanges
+        private double b = 0.1; // coefficient d'evaluation de la protection du roi
+        private double c = 10; // coefficient d'evaluation de l'activite des pieces
+        private double d = 10; // coefficient d'evaluation de l'occupation du centre
 
         private int[] centrageCase = new int[]{1,1,1,1,1,1,1,1,
                                                 1,2,2,2,2,2,2,1,
@@ -51,8 +57,10 @@ namespace processAI1
                                            "a2","b2","c2","d2","e2","f2","g2","h2",
                                            "a1","b1","c1","d1","e1","f1","g1","h1" };
 
-        public Intelligence()
+        public Intelligence(int couleur)
         {
+            m_joueur = couleur;
+            maxDepth = 2;
             roiABouge = false;
             tourDroiteABouge = false;
             tourGaucheABouge = false;
@@ -68,13 +76,15 @@ namespace processAI1
             {
                 Console.Write(tabCoord[c.indexDepart] + " " + tabCoord[c.indexArrivee] + ": " + eval(plateau, joueur, c) + "\n");
             }
-            System.Threading.Thread.Sleep(1000);
+            System.Threading.Thread.Sleep(5000);
             */
+            coupAlphaBeta = coupsPossibles[0]; // agent aleatoire
+            coupAlphaBeta = meilleurCoup(plateau, joueur, coupsPossibles); // agent greedy
+            alphaBeta(plateau, EVAL_NEG_INF, EVAL_POS_INF, 0, new Coup(), joueur); // agent prevoyant
 
-            Coup coupJoue = meilleurCoup(plateau, joueur, coupsPossibles);
-            majInfoRoque(plateau, joueur, coupJoue);
+            majInfoRoque(plateau, joueur, coupAlphaBeta);
 
-            return coupJoue;
+            return coupAlphaBeta;
         }
 
         public List<Coup> listerCoupsPossibles(int[] plateau, int joueur)
@@ -160,6 +170,10 @@ namespace processAI1
 
         private int[] plateauApresCoup(int[] plateau, int joueur, Coup c)
         {
+            if(c.indexDepart == -1)
+            {
+                return plateau;
+            }
             int[] nouveauPlateau = new int[plateau.Length];
             Array.Copy(plateau, nouveauPlateau, plateau.Length);
             nouveauPlateau[c.indexDepart] = 0;
@@ -585,25 +599,29 @@ namespace processAI1
 
 
         // retourne un score pour le coup (un grand score correspond a un bon coup)
-        private int eval(int[] plateau, int joueur, Coup c)
+        private int eval(int[] plateau, int joueur, Coup coup)
         {
-            int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
-            double score = alpha * evalEchange(plateau, c, joueur) +
-                           beta * evalProtection(nouveauPlateau, joueur) +
-                           gamma * evalCentre(nouveauPlateau, joueur) +
-                           omega * evalActivite(nouveauPlateau, joueur);
+            int[] nouveauPlateau = plateauApresCoup(plateau, joueur, coup);
+            double score = a * evalEchange(plateau, coup, joueur) +
+                           b * evalProtection(nouveauPlateau, joueur) +
+                           c * evalCentre(nouveauPlateau, joueur) +
+                           d * evalActivite(nouveauPlateau, joueur);
             /*
-             * Console.Write(evalEchange(plateau, c, joueur) + "\t" + evalProtection(nouveauPlateau, joueur) + "\t" +
-                          evalCentre(nouveauPlateau, joueur) + "\t" + evalActivite(nouveauPlateau, c, joueur) + "\t" +
+             Console.Write(a * evalEchange(plateau, coup, joueur) + "\t" + b * evalProtection(nouveauPlateau, joueur) + "\t" +
+                          c * evalCentre(nouveauPlateau, joueur) + "\t" + d * evalActivite(nouveauPlateau, joueur) + "\t" +
                           (int)(score) + "\n");
-                          */
+             */             
+            if(joueur != m_joueur)
+            {
+                return (int)(EVAL_POS_INF - score);
+            }
             return (int)(score);
         }
 
         // evaluation de l'echange implique par le coup
         private double evalEchange(int[] plateau, Coup c, int joueur)
         {
-            int pieceEchangee = plateau[c.indexArrivee];
+            int pieceEchangee = Math.Abs(plateau[c.indexArrivee]);
 
             if (pieceEchangee == 0)
             {
@@ -611,7 +629,7 @@ namespace processAI1
             }
             else
             {
-                return valeurPiece[-1 * joueur * pieceEchangee];
+                return valeurPiece[pieceEchangee];
             }
         }
 
@@ -770,6 +788,54 @@ namespace processAI1
             return score;
         }
 
+        int alphaBeta(int[] plateau, int alpha, int beta, int depth, Coup c, int joueur)
+        {
+            if (depth == maxDepth)
+            {
+                return eval(plateau, -1 * joueur, c);//eval doit retourner un float
+            }
+            int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
+            int tmp;
+            List<Coup> coupsPossibles = listerCoupsPossibles(plateau, joueur);
+            Coup coupTmp = coupsPossibles[0];
+            if(joueur == m_joueur) { //noeud max: on prend le meilleur coup possible
+                tmp = EVAL_NEG_INF;
+                foreach(Coup coup in coupsPossibles)
+                {
+                    tmp = Math.Max(tmp, alphaBeta(nouveauPlateau, alpha, beta, depth + 1, coup, -1 * joueur));
+                    if(tmp >= beta)
+                    {
+                        return tmp;
+                    }
+                    if(tmp >= alpha)
+                    {
+                        alpha = tmp;
+                        coupTmp = coup;
+                    }
+                }
+            }
+            else { // noeud min: le joueur ennemi choisit le coup qui nous arrange le moins
+                tmp = EVAL_POS_INF; 
+                foreach (Coup coup in coupsPossibles)
+                {
+                    tmp = Math.Min(tmp, alphaBeta(plateauApresCoup(plateau, joueur, coup), alpha, beta, depth + 1, coup, -1 * joueur));
+                    if (tmp <= alpha)
+                    {
+                        return tmp;
+                    }
+                    if (tmp <= beta)
+                    {
+                        beta = tmp;
+                        coupTmp = coup;
+                    }
+                }
+            }
+            if(depth == 0) // l'algorithme a terminé : actualiser le meilleur coup avec celui ayant le meilleur score en profondeur 1
+            {
+                coupAlphaBeta = coupTmp;
+            }
+            return tmp;
+        }
     }
 
 
@@ -781,6 +847,12 @@ namespace processAI1
         private Boolean promotion;
         private int roque;
         private double score;  // valeur du coup en terme d'efficacité
+
+        public Coup()
+        { // constructeur de coup vide
+            indexDepart = -1;
+            indexArrivee = -1;
+        }
 
         public Coup(int dep, int arr)
         {
