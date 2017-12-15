@@ -35,9 +35,8 @@ namespace processAI1
         private Coup coupAlphaBeta;
 
         private double a = 100; // coefficient d'evaluation de la gestion des echanges
-        private double b = 0.1; // coefficient d'evaluation de la protection du roi
-        private double c = 10; // coefficient d'evaluation de l'activite des pieces
-        private double d = 10; // coefficient d'evaluation de l'occupation du centre
+        private double c = 1; // coefficient d'evaluation de l'activite des pieces
+        private double d = 1; // coefficient d'evaluation de l'occupation du centre
 
         private int[] centrageCase = new int[]{1,1,1,1,1,1,1,1,
                                                 1,2,2,2,2,2,2,1,
@@ -69,19 +68,13 @@ namespace processAI1
 
         public Coup choisirCoup(int[] plateau, int joueur)
         {
-            List<Coup> coupsPossibles = listerCoupsPossibles(plateau, joueur);
+            //List<Coup> coupsPossibles = listerCoupsPossibles(plateau, joueur);
 
-            /*
-            foreach (Coup c in coupsPossibles)
-            {
-                Console.Write(tabCoord[c.indexDepart] + " " + tabCoord[c.indexArrivee] + ": " + eval(plateau, joueur, c) + "\n");
-            }
-            System.Threading.Thread.Sleep(5000);
-            */
-            coupAlphaBeta = coupsPossibles[0]; // agent aleatoire
-            coupAlphaBeta = meilleurCoup(plateau, joueur, coupsPossibles); // agent greedy
+            
+            //Coup coup = coupsPossibles[0]; // agent aleatoire
+            //coup = meilleurCoup(plateau, joueur, coupsPossibles); // agent greedy
             alphaBeta(plateau, EVAL_NEG_INF, EVAL_POS_INF, 0, new Coup(), joueur); // agent prevoyant
-
+            
             majInfoRoque(plateau, joueur, coupAlphaBeta);
 
             return coupAlphaBeta;
@@ -582,10 +575,10 @@ namespace processAI1
         {
             Coup c = coupsPossibles[0];
 
-            int scoreMax = eval(plateau, joueur, coupsPossibles[0]);
+            int scoreMax = eval(plateauApresCoup(plateau, joueur, c), joueur);
             for (int i = 0; i < coupsPossibles.Count; i++)
             {
-                int score = eval(plateau, joueur, coupsPossibles[i]);
+                int score = eval(plateauApresCoup(plateau, joueur, coupsPossibles[i]), joueur);
                 coupsPossibles[i].setScore(score);
                 if (score > scoreMax)
                 {
@@ -599,91 +592,51 @@ namespace processAI1
 
 
         // retourne un score pour le coup (un grand score correspond a un bon coup)
-        private int eval(int[] plateau, int joueur, Coup coup)
+        private int eval(int[] plateau, int joueur)
         {
-            int[] nouveauPlateau = plateauApresCoup(plateau, joueur, coup);
-            double score = a * evalEchange(plateau, coup, joueur) +
-                           b * evalProtection(nouveauPlateau, joueur) +
-                           c * evalCentre(nouveauPlateau, joueur) +
-                           d * evalActivite(nouveauPlateau, joueur);
-            /*
-             Console.Write(a * evalEchange(plateau, coup, joueur) + "\t" + b * evalProtection(nouveauPlateau, joueur) + "\t" +
-                          c * evalCentre(nouveauPlateau, joueur) + "\t" + d * evalActivite(nouveauPlateau, joueur) + "\t" +
-                          (int)(score) + "\n");
-             */             
-            if(joueur != m_joueur)
-            {
-                return (int)(EVAL_POS_INF - score);
-            }
+            double score = a * evalPieces(plateau, joueur) +
+                           c * evalCentre(plateau, joueur) +
+                           d * evalActivite(plateau, joueur);
             return (int)(score);
         }
 
-        // evaluation de l'echange implique par le coup
-        private double evalEchange(int[] plateau, Coup c, int joueur)
+        private double evalPieces(int[] plateau, int joueur)
         {
-            int pieceEchangee = Math.Abs(plateau[c.indexArrivee]);
-
-            if (pieceEchangee == 0)
+            double res = 0;
+            for(int i = 0; i < 64; i++)
             {
-                return 0;
-            }
-            else
-            {
-                return valeurPiece[pieceEchangee];
-            }
-        }
-
-        // evaluation de la protection du roi apres le coup
-        private double evalProtection(int[] plateau, int joueur)
-        {
-            double score = 0;
-
-            int indexRoi = positionRoi(plateau, joueur);
-            int i = indexRoi / 8;
-            int j = indexRoi % 8;
-
-            // somme les menaces des pieces adverse ayant le roi en ligne de mire avec un coeff de 4
-            score += 4 * enLigneMireFou(plateau, joueur, indexRoi);
-            score += 4 * enLigneMireTour(plateau, joueur, indexRoi);
-
-            List<int> indexesMenaces;
-            int piece;
-            foreach (int index in casesAdjacentes(i, j))
-            {
-                indexesMenaces = menaces(plateau, joueur, index / 8, index % 8);
-
-                // somme les valeurs des pieces menacant les cases adjacentes du roi avec un coeff de 2
-                foreach (int idx in indexesMenaces)
+                if (joueur * plateau[i] > 0)
                 {
-                    piece = Math.Abs(plateau[idx]);
-                    if(piece != R)
-                    {
-                        score += valeurPiece[piece] * 2;
-                    }
+                    res += valeurPiece[Math.Abs(plateau[i])];
                 }
-                // somme les menaces des pieces adverse ayant une case adjacente au roi en ligne de mire
-                score += enLigneMireFou(plateau, joueur, index);
-                score += enLigneMireTour(plateau, joueur, index);
+                else
+                {
+                    res -= valeurPiece[Math.Abs(plateau[i])];
+                }
             }
-
-
-            return (100.0 / (score + 1));
+            return res;
         }
-
+        
         // evaluation de l'occupation du centre apres le coup
-        private double evalCentre(int[] plateauApresCoup, int joueur)
+        private double evalCentre(int[] plateau, int joueur)
         {
-            List<Coup> coupsPossibles = listerCoupsPossibles(plateauApresCoup, joueur);
-            double score = 0;
+            List<Coup> coupsPossibles = listerCoupsPossibles(plateau, joueur);
+            int score = 0;
+            for (int i = 0; i < 64; i++)
+            {
+                if (joueur * plateau[i] > 0)
+                {
+                    score += centrageCase[i];
+                }
+            }
             if (coupsPossibles.Any())
             {
-                score += centrageCase[coupsPossibles[0].indexArrivee];
                 foreach (Coup c in coupsPossibles)
                 {
                     score += centrageCase[c.indexArrivee];
                 }
             }
-            return (int)((score / 1176) * 100);
+            return score / 100;
         }
 
         // evaluation de l'activite des pieces apres le coup
@@ -792,7 +745,7 @@ namespace processAI1
         {
             if (depth == maxDepth)
             {
-                return eval(plateau, -1 * joueur, c);//eval doit retourner un float
+                return eval(plateau, m_joueur);//eval doit retourner un float
             }
             int[] nouveauPlateau = plateauApresCoup(plateau, joueur, c);
             int tmp;
@@ -805,6 +758,10 @@ namespace processAI1
                     tmp = Math.Max(tmp, alphaBeta(nouveauPlateau, alpha, beta, depth + 1, coup, -1 * joueur));
                     if(tmp >= beta)
                     {
+                        if (depth == 0) // l'algorithme a terminé : actualiser le meilleur coup avec celui ayant le meilleur score en profondeur 1
+                        {
+                            coupAlphaBeta = coupTmp;
+                        }
                         return tmp;
                     }
                     if(tmp >= alpha)
