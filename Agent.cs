@@ -22,7 +22,7 @@ namespace processAI1
         public Agent(int joueur, String [] coord, int [] plateau)
         {
             couleurJoueur = joueur;
-            intelligence = new Intelligence();
+            intelligence = new Intelligence(couleurJoueur);
             capteur = new Capteur(plateau);
             effecteur = new Effecteur(coord);
         }
