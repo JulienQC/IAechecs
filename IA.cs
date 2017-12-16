@@ -642,7 +642,8 @@ namespace processAI1
             if (!listeCoupsPossibles.Any())
             {
                 return EVAL_NEG_INF;
-            } else
+            }
+            else
             {
                 return score;
             }
@@ -659,7 +660,8 @@ namespace processAI1
             if (!listeCoupsPossibles.Any() && estMenacee(plateau, joueur, i, j))
             {
                 return EVAL_POS_INF;
-            } else
+            }
+            else
             {
                 return evalAdversairePat(score, plateau, joueur);
             }
